@@ -1,0 +1,2 @@
+echo "/android" >> .gitignore
+echo "/ios" >> .gitignore
