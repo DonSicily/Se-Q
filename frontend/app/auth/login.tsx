@@ -12,7 +12,7 @@ import BACKEND_URL from '../../utils/config';
 // are disabled for this app. See utils/notifications.ts for details.
 
 // AMENDMENT (font): orbitron36black — place the TTF file at:
-//   frontend/assets/fonts/orbitron-bold.ttf
+//   frontend/assets/fonts/orbitron-bold.otf
 // The font is loaded via expo-font's useFonts hook.  Until the file is present
 // the text falls back to the system sans-serif (the style is still applied so
 // the layout will not shift once the real file is dropped in).
@@ -25,7 +25,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [fontsLoaded] = useFonts({
-    'orbitron-bold': require('../../assets/fonts/orbitron-bold.ttf'),
+    'orbitron-bold': require('../../assets/fonts/orbitron-bold.otf'),
   });
 
   const handleLogin = async () => {
