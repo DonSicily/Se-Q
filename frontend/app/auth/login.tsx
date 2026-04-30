@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import axios from 'axios';
 import { saveAuthData, clearAuthData } from '../../utils/auth';
 import BACKEND_URL from '../../utils/config';
@@ -10,12 +11,22 @@ import BACKEND_URL from '../../utils/config';
 // AMENDMENT 4: setupPushNotifications import removed — push notifications
 // are disabled for this app. See utils/notifications.ts for details.
 
+// AMENDMENT (font): Eurostile Bold Extended — place the TTF file at:
+//   frontend/assets/fonts/orbitron-black.ttf
+// The font is loaded via expo-font's useFonts hook.  Until the file is present
+// the text falls back to the system sans-serif (the style is still applied so
+// the layout will not shift once the real file is dropped in).
+
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    'orbitron-black': require('../../assets/fonts/orbitron-black.ttf'),
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -141,7 +152,7 @@ const styles = StyleSheet.create({
   scrollContent:   { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
   header:          { alignItems: 'center', marginBottom: 48 },
   logoContainer:   { marginBottom: 8, paddingHorizontal: 16, paddingVertical: 6 },
-  logoText:        { fontSize: 52, fontWeight: '900', color: '#fff', letterSpacing: 4, fontStyle: 'italic' },
+  logoText:        { fontSize: 45, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-black' },
   subtitle:        { fontSize: 16, color: '#94A3B8', marginTop: 8 },
   form:            { width: '100%' },
   inputContainer:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
