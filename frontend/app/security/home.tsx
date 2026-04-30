@@ -41,36 +41,33 @@ export default function SecurityHome() {
 
   // ── Panic alarm ──────────────────────────────────────────────────────────
   //
-  // AMENDMENT 2 — Key design decisions:
+  // Design rules (leak-free):
   //
-  // 1. staysActiveInBackground: true — the alarm keeps playing even when the
-  //    agent navigates within the app or briefly minimises it, so they cannot
-  //    miss an active panic no matter which screen they are on.
+  // 1. The alarm is SCOPED TO THIS SCREEN ONLY via isFocusedRef.
+  //    useFocusEffect starts it on focus and stops it on blur — no bleed into
+  //    /security/panics, settings, chat, messages, or any other route.
   //
-  // 2. The alarm is NOT stopped in the useFocusEffect cleanup.  Previously
-  //    every blur (navigating to the Panics list, for example) killed the
-  //    alarm.  Now it only stops when:
-  //      a) The agent taps "Silence" (silenceAlarm), or
-  //      b) All nearby panics resolve (count drops to 0), or
-  //      c) The app truly goes to the background (AppState listener).
+  // 2. stopAlarm() ALWAYS resets the AudioSession to safe defaults after
+  //    unloading the sound.  This plugs the audio-mode leak: previously
+  //    staysActiveInBackground:true persisted in the shared audio session
+  //    across screens, role switches, and re-logins.
   //
-  // 3. When the app returns to the foreground the alarm is restarted if
-  //    unsilenced panics are still present, covering the case where a guard
-  //    opens the app after days without using it.
+  // 3. Cold-start / foreground-return: the AppState listener restarts the
+  //    alarm when the app becomes active, but ONLY while this screen is
+  //    focused (isFocusedRef guard).  The count-change effect is similarly
+  //    guarded so arriving panics only ring here, not behind another route.
   //
-  // 4. Audio mode uses staysActiveInBackground: true so the alarm session
-  //    is NOT terminated when another audio operation (e.g. the ambient
-  //    recorder on a civil device, or any other expo-av call) resets the
-  //    shared audio session.  This resolves the clash described in the brief.
+  // 4. A new panic (count increase) overrides any prior silence so the agent
+  //    cannot miss a fresh emergency.
 
   const alarmRef          = useRef<Audio.Sound | null>(null);
-  const [alarmOn, setAlarmOn]     = useState(false);
+  const [alarmOn, setAlarmOn] = useState(false);
   const alarmSilencedRef  = useRef(false);
   const lastPanicCountRef = useRef(0);
   const nearbyPanicsRef   = useRef<any[]>([]);
+  const isFocusedRef      = useRef(false); // true only while this screen has nav focus
 
-  // Keep a ref in sync so the AppState handler can read the current panics
-  // without capturing a stale closure.
+  // Keep ref in sync for closure-safe reads
   useEffect(() => {
     nearbyPanicsRef.current = nearbyPanics;
   }, [nearbyPanics]);
@@ -78,11 +75,9 @@ export default function SecurityHome() {
   const startAlarm = async () => {
     if (alarmRef.current) return; // already playing
     try {
-      // AMENDMENT 2: staysActiveInBackground: true so the alarm survives
-      // navigation and audio-session resets from other expo-av callers.
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        staysActiveInBackground: true,   // ← key change
+        staysActiveInBackground: false, // dashboard-scoped; no cross-screen bleed
         shouldDuckAndroid: false,
         playThroughEarpieceAndroid: false,
       });
@@ -108,18 +103,29 @@ export default function SecurityHome() {
       try { await alarmRef.current.unloadAsync(); } catch (_) {}
       alarmRef.current = null;
     }
+    // Reset AudioSession to safe defaults — plugs the session-bleed leak.
+    // Without this reset the shared AudioSession retains whatever mode
+    // startAlarm() last configured it to, contaminating every subsequent
+    // audio caller (ambient recorder, panics screen playback, next login).
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (_) {}
     setAlarmOn(false);
   };
 
   const silenceAlarm = async () => {
     await stopAlarm();
-    // AMENDMENT 2: Mark silenced so re-focus and AppState foreground events
-    // do not restart the alarm for the current panic batch.
     alarmSilencedRef.current = true;
     lastPanicCountRef.current = nearbyPanicsRef.current.length;
   };
 
-  // React to panic count changes
+  // React to panic count changes — guarded by isFocusedRef so this never
+  // rings the alarm while the agent is on another screen
   useEffect(() => {
     const count = nearbyPanics.length;
     if (count === 0) {
@@ -130,39 +136,49 @@ export default function SecurityHome() {
     }
     const newArrived = count > lastPanicCountRef.current;
     if (newArrived) {
-      // New panic arrived — override any previous silence
+      // New panic — override any existing silence so agent cannot miss it
       alarmSilencedRef.current = false;
       lastPanicCountRef.current = count;
     }
-    if (!alarmSilencedRef.current || newArrived) {
+    if ((!alarmSilencedRef.current || newArrived) && isFocusedRef.current) {
       startAlarm();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nearbyPanics.length]);
 
-  // ── AppState: restart alarm on foreground if unsilenced panics exist ──────
+  // ── Screen focus/blur — primary alarm lifecycle gate ─────────────────────
+  // ON FOCUS : restart alarm if unsilenced panics exist (covers cold-start,
+  //            app foreground from notification, return from any sub-route).
+  // ON BLUR  : stop alarm + reset audio mode.  This is the core fix that
+  //            prevents the alarm from bleeding to any other screen.
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      if (nearbyPanicsRef.current.length > 0 && !alarmSilencedRef.current) {
+        startAlarm();
+      }
+      return () => {
+        isFocusedRef.current = false;
+        stopAlarm(); // also resets AudioSession — zero bleed guarantee
+      };
+    }, [])
+  );
+
+  // ── AppState: restart alarm on foreground only if this screen is focused ──
+  // With staysActiveInBackground:false the OS suspends audio when backgrounded.
+  // On foreground-return the alarm must restart — but only for this screen.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'active') {
-        // App came to the foreground (could be after days of inactivity).
-        // If there are active panics and the alarm hasn't been silenced,
-        // ensure it is playing.
+      if (state === 'active' && isFocusedRef.current) {
         if (nearbyPanicsRef.current.length > 0 && !alarmSilencedRef.current) {
           startAlarm();
         }
-      } else if (state === 'background' || state === 'inactive') {
-        // AMENDMENT 2: We intentionally do NOT stop the alarm here.
-        // staysActiveInBackground: true keeps it audible so the guard can
-        // hear it even if they accidentally leave the app.
       }
     });
     return () => sub.remove();
   }, []);
 
-  // ── Re-poll unread count immediately on focus ─────────────────────────────
-  // AMENDMENT 2: useFocusEffect no longer calls stopAlarm() on blur.
-  // The alarm is deliberately NOT tied to screen focus — it persists across
-  // all in-app navigation until explicitly silenced or panics clear.
+  // ── Re-poll unread count on focus ─────────────────────────────────────────
   useFocusEffect(
     useCallback(() => {
       const pollUnread = async () => {
@@ -177,8 +193,6 @@ export default function SecurityHome() {
         } catch (_) {}
       };
       pollUnread();
-
-      // No alarm stop on blur — see design comments above.
       return () => {};
     }, [])
   );
@@ -192,7 +206,7 @@ export default function SecurityHome() {
     return () => sub.remove();
   }, []);
 
-  // Stop alarm on component unmount (full teardown, not just blur)
+  // Safety net: full cleanup on unmount (stopAlarm resets audio mode too)
   useEffect(() => { return () => { stopAlarm(); }; }, []);
 
   useEffect(() => {
@@ -327,7 +341,7 @@ export default function SecurityHome() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await stopAlarm();
+            await stopAlarm(); // stopAlarm resets audio mode — no bleed into next session
             await clearAuthData();
             router.replace('/auth/login');
           }
