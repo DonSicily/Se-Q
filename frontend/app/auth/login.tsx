@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useFonts } from 'expo-font';
 import axios from 'axios';
 import { saveAuthData, clearAuthData } from '../../utils/auth';
 import BACKEND_URL from '../../utils/config';
@@ -23,10 +22,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    'orbitron-bold': require('../../assets/fonts/orbitron-bold.otf'),
-  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -87,7 +82,11 @@ export default function Login() {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>Se-Q</Text>
+              <Image
+                source={require('../../assets/images/login-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.subtitle}>Welcome Back</Text>
           </View>
@@ -151,8 +150,8 @@ const styles = StyleSheet.create({
   keyboardView:    { flex: 1 },
   scrollContent:   { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
   header:          { alignItems: 'center', marginBottom: 48 },
-  logoContainer:   { marginBottom: 8, paddingHorizontal: 16, paddingVertical: 6 },
-  logoText:        { fontSize: 30, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-bold' },
+  logoContainer:   { marginBottom: 8, paddingHorizontal: 16, paddingVertical: 6, alignItems: 'center' },
+  logoImage:       { width: 180, height: 72 },
   subtitle:        { fontSize: 16, color: '#94A3B8', marginTop: 8 },
   form:            { width: '100%' },
   inputContainer:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
