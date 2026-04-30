@@ -12,7 +12,7 @@ import BACKEND_URL from '../../utils/config';
 // are disabled for this app. See utils/notifications.ts for details.
 
 // AMENDMENT (font): orbitron36black — place the TTF file at:
-//   frontend/assets/fonts/orbitron-black.ttf
+//   frontend/assets/fonts/orbitron-bold.ttf
 // The font is loaded via expo-font's useFonts hook.  Until the file is present
 // the text falls back to the system sans-serif (the style is still applied so
 // the layout will not shift once the real file is dropped in).
@@ -25,7 +25,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [fontsLoaded] = useFonts({
-    'orbitron-black': require('../../assets/fonts/orbitron-black.ttf'),
+    'orbitron-bold': require('../../assets/fonts/orbitron-bold.ttf'),
   });
 
   const handleLogin = async () => {
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   scrollContent:   { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
   header:          { alignItems: 'center', marginBottom: 48 },
   logoContainer:   { marginBottom: 8, paddingHorizontal: 16, paddingVertical: 6 },
-  logoText:        { fontSize: 36, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-black' },
+  logoText:        { fontSize: 30, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-bold' },
   subtitle:        { fontSize: 16, color: '#94A3B8', marginTop: 8 },
   form:            { width: '100%' },
   inputContainer:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
