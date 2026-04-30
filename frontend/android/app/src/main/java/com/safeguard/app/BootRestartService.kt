@@ -134,6 +134,7 @@ class BootRestartService : Service() {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_PANIC, "Se-Q Emergency", NotificationManager.IMPORTANCE_HIGH).apply {
                 description     = "Active panic alert notifications"
+                setSound(null, null)   // silent — vibration only
                 enableLights(true)
                 lightColor      = 0xFFEF4444.toInt()
                 enableVibration(true)
