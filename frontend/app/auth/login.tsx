@@ -11,7 +11,7 @@ import BACKEND_URL from '../../utils/config';
 // AMENDMENT 4: setupPushNotifications import removed — push notifications
 // are disabled for this app. See utils/notifications.ts for details.
 
-// AMENDMENT (font): Eurostile Bold Extended — place the TTF file at:
+// AMENDMENT (font): orbitron36black — place the TTF file at:
 //   frontend/assets/fonts/orbitron-black.ttf
 // The font is loaded via expo-font's useFonts hook.  Until the file is present
 // the text falls back to the system sans-serif (the style is still applied so
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   scrollContent:   { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
   header:          { alignItems: 'center', marginBottom: 48 },
   logoContainer:   { marginBottom: 8, paddingHorizontal: 16, paddingVertical: 6 },
-  logoText:        { fontSize: 45, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-black' },
+  logoText:        { fontSize: 36, color: '#fff', letterSpacing: 6, fontFamily: 'orbitron-black' },
   subtitle:        { fontSize: 16, color: '#94A3B8', marginTop: 8 },
   form:            { width: '100%' },
   inputContainer:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
