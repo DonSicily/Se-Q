@@ -537,6 +537,7 @@ Please respond or send help immediately.
             NotificationChannel(CHANNEL_COUNTDOWN, "Se-Q Panic Countdown",
                 NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Shows 2-second cancel window before panic fires"
+                setSound(null, null)   // silent — vibration only
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 300, 100, 300, 100, 300)
                 lightColor = 0xFFEF4444.toInt()
@@ -548,11 +549,11 @@ Please respond or send help immediately.
         val criticalChannel = NotificationChannel(CHANNEL_CRITICAL, "Se-Q Emergency Alert",
             NotificationManager.IMPORTANCE_HIGH).apply {
             description = "Critical emergency alerts that bypass Do Not Disturb"
+            setSound(null, null)   // silent — alarm sound removed
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
             lightColor = 0xFFEF4444.toInt()
             enableLights(true)
-            setSound(Settings.System.DEFAULT_ALARM_ALERT_URI, null)
             setBypassDnd(true)  // KEY: Bypass Do Not Disturb
         }
         nm.createNotificationChannel(criticalChannel)
