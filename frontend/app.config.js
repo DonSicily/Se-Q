@@ -3,7 +3,7 @@ export default {
     name: "Se-Q",
     slug: "se-q",
     version: "2.1.9",
-    owner: "zedis",
+    owner: "siliano",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "safeguard",
@@ -34,7 +34,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: "0d200ed5-2c6b-4091-b24a-c130eb32d8fc"
+        projectId: "31841578-3490-4485-a8d5-066029ceab8a"
       }
     }
   }
