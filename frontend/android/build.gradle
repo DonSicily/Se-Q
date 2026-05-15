@@ -35,14 +35,3 @@ allprojects {
         }
     }
 }
-
-allprojects {
-    repositories {
-        maven {
-            url "https://raw.githubusercontent.com/asyncstorage/shared-storage/main/repository"
-        }
-        mavenCentral()
-        google()
-        maven { url 'https://www.jitpack.io' }
-    }
-}
