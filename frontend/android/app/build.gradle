@@ -235,3 +235,7 @@ android {
 configurations.all {
     exclude group: 'com.mapbox.mapboxsdk', module: 'mapbox-android-core'
 }
+
+dependencies {
+    implementation 'org.asyncstorage.shared_storage:storage-android:1.0.0'
+}
