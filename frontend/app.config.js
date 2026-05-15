@@ -3,7 +3,7 @@ export default {
     name: "Se-Q",
     slug: "se-q",
     version: "2.1.9",
-    owner: "VellDaDon",
+    owner: "vellidadon",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "safeguard",
