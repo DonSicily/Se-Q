@@ -1,0 +1,55 @@
+{
+  "cli": {
+    "version": ">= 15.0.0"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "CI": "1",
+        "NODE_ENV": "production",
+        "EXPO_USE_FAST_RESOLVER": "1",
+        "MAPBOX_ACCESS_TOKEN": "YOUR_MAPBOX_TOKEN_HERE"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "CI": "1",
+        "NODE_ENV": "production",
+        "EXPO_USE_FAST_RESOLVER": "1",
+        "MAPBOX_ACCESS_TOKEN": "YOUR_MAPBOX_TOKEN_HERE"
+      }
+    },
+    "clean-preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EAS_RESTORE_CACHE": "0",
+        "EAS_SAVE_CACHE": "1",
+        "CI": "1",
+        "NODE_ENV": "production",
+        "EXPO_USE_FAST_RESOLVER": "1"
+      }
+    },
+    "debug": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "developmentClient": true,
+      "env": {
+        "CI": "1",
+        "EXPO_USE_FAST_RESOLVER": "1"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
