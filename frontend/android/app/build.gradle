@@ -239,3 +239,11 @@ configurations.all {
 dependencies {
     implementation 'org.asyncstorage.shared_storage:storage-android:1.0.0'
 }
+
+dependencies {
+    implementation 'org.asyncstorage.shared_storage:storage-android:1.0.0'
+}
+
+dependencies {
+    implementation 'org.asyncstorage.shared_storage:storage-android:1.0.0'
+}
