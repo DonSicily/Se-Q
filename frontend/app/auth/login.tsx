@@ -115,9 +115,11 @@ export default function Login() {
       <View style={styles.gradientOverlay} />
       <View style={styles.gradientOverlay2} />
 
-      {/* Decorative elements */}
+      {/* Decorative elements with red accents */}
       <View style={styles.topLeftGlow} />
       <View style={styles.bottomRightGlow} />
+      <View style={styles.redAccentTop} />
+      <View style={styles.redAccentBottom} />
 
       {/* Geometric pattern */}
       <View style={styles.geometricPattern}>
@@ -130,13 +132,15 @@ export default function Login() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
           <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
-            {/* Logo Section */}
+            {/* Logo Section with actual logo image */}
             <View style={styles.logoSection}>
               <Animated.View style={[styles.logoContainer, { transform: [{ scale: pulseAnim }] }]}>
                 <View style={styles.logoGlow} />
-                <View style={styles.logoIcon}>
-                  <Ionicons name="shield-checkmark" size={48} color="#fff" />
-                </View>
+                <Image
+                  source={require('../../assets/images/login-logo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
                 <View style={styles.logoRing} />
               </Animated.View>
               <Text style={styles.appName}>Se-Q</Text>
@@ -152,7 +156,7 @@ export default function Login() {
               <View style={styles.inputWrapper}>
                 <View style={styles.inputContainer}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="mail" size={20} color="#818CF8" />
+                    <Ionicons name="mail" size={20} color="#EF4444" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -171,7 +175,7 @@ export default function Login() {
               <View style={styles.inputWrapper}>
                 <View style={styles.inputContainer}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="lock-closed" size={20} color="#818CF8" />
+                    <Ionicons name="lock-closed" size={20} color="#EF4444" />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -202,7 +206,7 @@ export default function Login() {
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
 
-              {/* Login Button */}
+              {/* Login Button with red accent */}
               <TouchableOpacity
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]}
                 onPress={handleLogin}
@@ -237,14 +241,14 @@ export default function Login() {
               </View>
             </View>
 
-            {/* Admin Portal Link */}
+            {/* Admin Portal Link with red accent */}
             <TouchableOpacity
               style={styles.adminPortalLink}
               onPress={() => router.push('/admin/login')}
               activeOpacity={0.7}
             >
               <View style={styles.adminIconContainer}>
-                <Ionicons name="shield" size={18} color="#6366F1" />
+                <Ionicons name="shield" size={18} color="#EF4444" />
               </View>
               <Text style={styles.adminPortalText}>Admin Portal</Text>
             </TouchableOpacity>
@@ -299,6 +303,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     opacity: 0.1,
   },
+  redAccentTop: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 80,
+    height: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: 2,
+    opacity: 0.6,
+  },
+  redAccentBottom: {
+    position: 'absolute',
+    bottom: 150,
+    left: 20,
+    width: 60,
+    height: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: 2,
+    opacity: 0.6,
+  },
   geometricPattern: {
     position: 'absolute',
     top: 60,
@@ -352,16 +376,13 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#6366F1',
-    opacity: 0.3,
+    backgroundColor: '#EF4444',
+    opacity: 0.2,
   },
-  logoIcon: {
+  logoImage: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: 1,
   },
   logoRing: {
@@ -370,7 +391,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#818CF8',
+    borderColor: '#F87171',
     opacity: 0.5,
   },
   appName: {
@@ -411,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
     overflow: 'hidden',
   },
   inputIconContainer: {
@@ -419,9 +440,9 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(99, 102, 241, 0.2)',
+    borderRightColor: 'rgba(239, 68, 68, 0.2)',
   },
   input: {
     flex: 1,
@@ -439,17 +460,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#818CF8',
+    color: '#F87171',
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#EF4444',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366F1',
+    shadowColor: '#EF4444',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -496,7 +517,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   signUpButtonText: {
-    color: '#818CF8',
+    color: '#F87171',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -512,12 +533,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   adminPortalText: {
-    color: '#818CF8',
+    color: '#F87171',
     fontSize: 14,
     fontWeight: '500',
   },
