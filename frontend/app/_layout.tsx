@@ -1,3 +1,4 @@
+import * as SecureStore from "expo-secure-store";
 /**
  * _layout.tsx — Root layout
  *
@@ -40,7 +41,6 @@ import {
   AppState, AppStateStatus, View, Text,
   TouchableOpacity, Animated, StyleSheet,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { startQueueProcessor } from '../utils/offlineQueue';
@@ -184,7 +184,7 @@ function AppContent() {
 
   // ── User role (gates JS shake detector) ────────────────────────────
   useEffect(() => {
-    AsyncStorage.getItem('user_role').then(role => setUserRole(role));
+    SecureStore.getItem('user_role').then(role => setUserRole(role));
   }, [segments.join('/')]);
 
   const currentRoute    = segments.join('/');
@@ -194,8 +194,8 @@ function AppContent() {
   const handleShakeTrigger = useCallback(async () => {
     if (isOnPanicScreen) return;
     try {
-      const panicActive = await AsyncStorage.getItem('panic_active');
-      const activePanic = await AsyncStorage.getItem('active_panic');
+      const panicActive = await SecureStore.getItem('panic_active');
+      const activePanic = await SecureStore.getItem('active_panic');
       if (panicActive === 'true' || !!activePanic) return;
     } catch (_) {}
     // Show the in-app shake banner — the one permitted notification.
@@ -223,7 +223,7 @@ function AppContent() {
         const pending = await checkAndConsumePanic();
         if (!pending || !isMounted) return;
 
-        const role = await AsyncStorage.getItem('user_role');
+        const role = await SecureStore.getItem('user_role');
         if (role !== 'civil') return;
 
         const route = segments.join('/');
