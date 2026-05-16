@@ -51,6 +51,7 @@ export const saveAuthData = async (data: {
   is_premium?: boolean;
 }): Promise<boolean> => {
   try {
+    // Save auth token first
     if (Platform.OS !== 'web') {
       try {
         await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
@@ -60,13 +61,36 @@ export const saveAuthData = async (data: {
     } else {
       await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
     }
-    await SecureStore.multiSet([
-      [USER_ID_KEY,    data.user_id],
-      [USER_ROLE_KEY,  data.role],
-      [IS_PREMIUM_KEY, String(data.is_premium || false)],
-    ]);
+
+    // Save other user data
+    try {
+      await SecureStore.multiSet([
+        [USER_ID_KEY,    data.user_id],
+        [USER_ROLE_KEY,  data.role],
+        [IS_PREMIUM_KEY, String(data.is_premium || false)],
+      ]);
+    } catch (_) {
+      // Fallback: save individually
+      if (Platform.OS !== 'web') {
+        try {
+          await SecureStore.setItemAsync(USER_ID_KEY, data.user_id);
+          await SecureStore.setItemAsync(USER_ROLE_KEY, data.role);
+          await SecureStore.setItemAsync(IS_PREMIUM_KEY, String(data.is_premium || false));
+        } catch (_2) {
+          await SecureStore.setItem(USER_ID_KEY, data.user_id);
+          await SecureStore.setItem(USER_ROLE_KEY, data.role);
+          await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
+        }
+      } else {
+        await SecureStore.setItem(USER_ID_KEY, data.user_id);
+        await SecureStore.setItem(USER_ROLE_KEY, data.role);
+        await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
+      }
+    }
+
     return true;
-  } catch {
+  } catch (error) {
+    console.error('[Auth] Failed to save auth data:', error);
     return false;
   }
 };
