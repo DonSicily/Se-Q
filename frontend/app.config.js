@@ -35,7 +35,8 @@ export default {
     extra: {
       eas: {
         projectId: "faa8ffeb-e120-4b0e-bef8-9ef9d3a09419"
-      }
+      },
+      backendUrl: "https://se-q-production.up.railway.app"
     }
   }
 };
