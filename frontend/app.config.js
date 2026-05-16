@@ -3,7 +3,7 @@ export default {
     name: "Se-Q",
     slug: "se-q",
     version: "2.1.9",
-    owner: "siliano",
+    owner: "nwababy",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "safeguard",
@@ -34,7 +34,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: "31841578-3490-4485-a8d5-066029ceab8a"
+        projectId: "faa8ffeb-e120-4b0e-bef8-9ef9d3a09419"
       }
     }
   }
