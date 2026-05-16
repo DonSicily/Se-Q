@@ -251,3 +251,8 @@ dependencies {
 dependencies {
     implementation 'com.github.asyncstorage:shared-storage:1.0.0'
 }
+
+configurations.all {
+    exclude group: 'org.asyncstorage.shared_storage', module: 'storage-android'
+    exclude group: 'com.github.asyncstorage', module: 'shared-storage'
+}
