@@ -2174,7 +2174,7 @@ async def get_contactable_users(user=Depends(get_current_user)):
 # Restrict to specific origins for production security
 ALLOWED_ORIGINS = os.environ.get(
     'ALLOWED_ORIGINS',
-    'se-q-app.com,your-app.expo.dev,*.expo.dev,*.expo.io'
+    'se-q-app.com,your-app.expo.dev,*.expo.dev,*.expo.io,se-q-production.up.railway.app,*.up.railway.app'
 ).split(',')
 
 app.include_router(api_router)
