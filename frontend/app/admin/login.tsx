@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, StatusBar, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, StatusBar, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,11 +108,18 @@ export default function AdminLogin() {
       {/* Top accent glow */}
       <View style={styles.topGlow} />
 
-      {/* Corner accents */}
+      {/* Corner accents - Upper corners */}
       <View style={styles.cornerTL} />
       <View style={styles.cornerTR} />
+
+      {/* Corner accents - Lower corners (brought up for visibility) */}
       <View style={styles.cornerBL} />
       <View style={styles.cornerBR} />
+
+      {/* Bottom border line (raised for visibility) */}
+      <View style={styles.bottomBorderLine} />
+      <View style={styles.bottomBorderLineLeft} />
+      <View style={styles.bottomBorderLineRight} />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
@@ -278,7 +285,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderTopWidth: 2,
     borderColor: '#6366F1',
-    opacity: 0.3,
+    opacity: 0.5,
   },
   cornerTR: {
     position: 'absolute',
@@ -289,29 +296,56 @@ const styles = StyleSheet.create({
     borderRightWidth: 2,
     borderTopWidth: 2,
     borderColor: '#6366F1',
-    opacity: 0.3,
+    opacity: 0.5,
   },
   cornerBL: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 120,
     left: 24,
     width: 60,
     height: 60,
     borderLeftWidth: 2,
     borderBottomWidth: 2,
     borderColor: '#6366F1',
-    opacity: 0.3,
+    opacity: 0.5,
   },
   cornerBR: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 120,
     right: 24,
     width: 60,
     height: 60,
     borderRightWidth: 2,
     borderBottomWidth: 2,
     borderColor: '#6366F1',
-    opacity: 0.3,
+    opacity: 0.5,
+  },
+  bottomBorderLine: {
+    position: 'absolute',
+    bottom: 80,
+    left: 24,
+    right: 24,
+    height: 2,
+    backgroundColor: '#6366F1',
+    opacity: 0.4,
+  },
+  bottomBorderLineLeft: {
+    position: 'absolute',
+    bottom: 80,
+    left: 24,
+    width: 2,
+    height: 30,
+    backgroundColor: '#6366F1',
+    opacity: 0.4,
+  },
+  bottomBorderLineRight: {
+    position: 'absolute',
+    bottom: 80,
+    right: 24,
+    width: 2,
+    height: 30,
+    backgroundColor: '#6366F1',
+    opacity: 0.4,
   },
   safeArea: {
     flex: 1,
