@@ -40,6 +40,7 @@ import {
   AppState, AppStateStatus, View, Text,
   TouchableOpacity, Animated, StyleSheet,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { startQueueProcessor } from '../utils/offlineQueue';
@@ -183,7 +184,7 @@ function AppContent() {
 
   // ── User role (gates JS shake detector) ────────────────────────────
   useEffect(() => {
-    SecureStore.getItem('user_role').then(role => setUserRole(role));
+    SecureStore.getItemAsync('user_role').then(role => setUserRole(role));
   }, [segments.join('/')]);
 
   const currentRoute    = segments.join('/');
@@ -193,8 +194,8 @@ function AppContent() {
   const handleShakeTrigger = useCallback(async () => {
     if (isOnPanicScreen) return;
     try {
-      const panicActive = await SecureStore.getItem('panic_active');
-      const activePanic = await SecureStore.getItem('active_panic');
+      const panicActive = await SecureStore.getItemAsync('panic_active');
+      const activePanic = await SecureStore.getItemAsync('active_panic');
       if (panicActive === 'true' || !!activePanic) return;
     } catch (_) {}
     // Show the in-app shake banner — the one permitted notification.
@@ -204,7 +205,7 @@ function AppContent() {
   useShakeDetector({
     enabled:        shakeEnabled,
     threshold:      2.2,
-    requiredShakes: 5,   // 5 shakes as specified
+    requiredShakes: 5,
     windowMs:       2000,
     cooldownMs:     6000,
     onTriggered:    handleShakeTrigger,
@@ -222,7 +223,7 @@ function AppContent() {
         const pending = await checkAndConsumePanic();
         if (!pending || !isMounted) return;
 
-        const role = await SecureStore.getItem('user_role');
+        const role = await SecureStore.getItemAsync('user_role');
         if (role !== 'civil') return;
 
         const route = segments.join('/');
@@ -260,7 +261,6 @@ function AppContent() {
   }, []);
 
   // ── Send location to backend when security pings ────────────────────
-  // IMPORTANT: Define this BEFORE the useEffect that uses it to avoid closure issues
   const sendPingLocation = useCallback(async () => {
     try {
       const token = await getAuthToken();
@@ -273,7 +273,6 @@ function AppContent() {
         accuracy: Location.Accuracy.High,
       });
 
-      // Use ping-specific location endpoint (works even without active panic)
       await fetch(`${BACKEND_URL}/api/location/ping-update`, {
         method: 'POST',
         headers: {
@@ -292,12 +291,8 @@ function AppContent() {
     }
   }, []);
 
-  // ── Silent push for security ping → location transmission ────────────────
-  // Configure notifications to be SILENT (no banners, sounds, or badges)
-  // These notifications ONLY trigger location transmission for security tracking
+  // ── Silent push for security ping → location transmission ──────────
   useEffect(() => {
-    // Set up silent notification handler for security pings
-    // NOTE: Only valid properties are shouldShowAlert, shouldPlaySound, shouldSetBadge
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: false,
@@ -306,10 +301,8 @@ function AppContent() {
       }),
     });
 
-    // Listen for silent push notifications (type: "ping")
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
       const data = notification.request.content.data;
-      // When security pings, type="ping" triggers location transmission
       if (data?.type === 'ping') {
         sendPingLocation();
       }
@@ -330,20 +323,17 @@ function AppContent() {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function RootLayout() {
-  // CRITICAL: Reset audio session to clean state on app startup
-  // This fixes audio mode persistence that causes sound clashes after re-login
   useEffect(() => {
     const resetAudioSession = async () => {
       try {
-        // Set to neutral/default state - no recording, no special playback
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: false,
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
-          interruptionModeIOS: 0, // INTERRUPTION_MODE_IOS_DO_NOT_MIX
-          interruptionModeAndroid: 0, // INTERRUPTION_MODE_ANDROID_DO_NOT_MIX
+          interruptionModeIOS: 0,
+          interruptionModeAndroid: 0,
         });
         console.log('[RootLayout] Audio session reset to clean state');
       } catch (err) {
