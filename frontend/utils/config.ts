@@ -10,7 +10,7 @@
  *
  * PRODUCTION (EAS Build):
  *   ✅ Already set in app.json → expo.extra.backendUrl
- *   ✅ Current value: https://se-q-app8-production.up.railway.app
+ *   ✅ Current value: https://se-q-production.up.railway.app
  *
  * LOCAL DEV (Codespaces):
  *   Create frontend/.env:
