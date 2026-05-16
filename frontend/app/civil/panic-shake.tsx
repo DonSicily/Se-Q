@@ -39,7 +39,7 @@ if (!TaskManager.isTaskDefined(LOCATION_TASK)) {
     if (error || !data?.locations?.[0]) return;
     const loc = data.locations[0];
     try {
-      const token = await SecureStore.getItem('auth_token');
+      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         await axios.post(
           `${BACKEND_URL}/api/panic/location`,
@@ -68,9 +68,9 @@ const CATEGORIES = [
   { id: 'other',      icon: 'alert-circle', label: 'Other Emergency',        color: '#64748B' },
 ];
 
-// ── Persist panic to SecureStore ─────────────────────────────────────────────
+// ── Persist panic to AsyncStorage ─────────────────────────────────────────────
 const saveLocalPanic = async (panicId: string, category: string) => {
-  await SecureStore.multiSet([
+  await AsyncStorage.multiSet([
     ['panic_active',     'true'],
     ['panic_started_at', Date.now().toString()],
     ['panic_id',          panicId],
@@ -101,8 +101,8 @@ export default function PanicShake() {
   useEffect(() => {
     const check = async () => {
       if (!activatingRef.current) return;
-      const panicActive = await SecureStore.getItem('panic_active');
-      const activePanic = await SecureStore.getItem('active_panic');
+      const panicActive = await AsyncStorage.getItem('panic_active');
+      const activePanic = await AsyncStorage.getItem('active_panic');
       if (panicActive === 'true' || !!activePanic) router.replace('/civil/home');
     };
 
@@ -193,7 +193,7 @@ export default function PanicShake() {
 
       const panicId = response.data?.panic_id || 'unknown';
       await saveLocalPanic(panicId, category);
-      await SecureStore.setItem('auth_token', token);
+      await AsyncStorage.setItem('auth_token', token);
       capture.attachToPanic(panicId, token);
 
       await setNativePanicActive(true);

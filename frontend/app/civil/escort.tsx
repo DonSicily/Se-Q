@@ -47,7 +47,7 @@ if (!TaskManager.isTaskDefined(ESCORT_TASK)) {
     if (data?.locations?.[0]) {
       const loc = data.locations[0];
       try {
-        const token = await SecureStore.getItem('auth_token');
+        const token = await AsyncStorage.getItem('auth_token');
         if (token) {
           await axios.post(
             `${BACKEND_URL}/api/escort/location`,
@@ -402,7 +402,7 @@ export default function Escort() {
         if (statusRes.data?.is_active && statusRes.data?.session_id) {
           const sid = statusRes.data.session_id;
           const sat = statusRes.data.started_at || new Date().toISOString();
-          await SecureStore.multiSet([
+          await AsyncStorage.multiSet([
             ['active_escort', JSON.stringify({ session_id: sid, started_at: sat })],
             ['auth_token', token],
           ]);
@@ -410,17 +410,17 @@ export default function Escort() {
           setIsTracking(true); isTrackingRef.current = true;
           startLocationTracking(token);
         } else {
-          await SecureStore.removeItem('active_escort');
+          await AsyncStorage.removeItem('active_escort');
         }
       } catch (_statusErr) {
-        const stored = await SecureStore.getItem('active_escort');
+        const stored = await AsyncStorage.getItem('active_escort');
         if (stored) {
           try {
             const data = JSON.parse(stored);
             setIsTracking(true); isTrackingRef.current = true;
             setSessionId(data.session_id); setStartTime(data.started_at);
             startLocationTracking(token);
-          } catch (_) { await SecureStore.removeItem('active_escort'); }
+          } catch (_) { await AsyncStorage.removeItem('active_escort'); }
         }
       }
 
@@ -486,7 +486,7 @@ export default function Escort() {
 
       const newSessionId = res.data.session_id;
       const startedAt    = new Date().toISOString();
-      await SecureStore.multiSet([
+      await AsyncStorage.multiSet([
         ['active_escort', JSON.stringify({ session_id: newSessionId, started_at: startedAt })],
         ['auth_token', token],
       ]);
@@ -506,7 +506,7 @@ export default function Escort() {
           if (check.data?.is_active && check.data?.session_id) {
             const sid = check.data.session_id;
             const sat = check.data.started_at || new Date().toISOString();
-            await SecureStore.multiSet([
+            await AsyncStorage.multiSet([
               ['active_escort', JSON.stringify({ session_id: sid, started_at: sat })],
               ['auth_token', tok],
             ]);
@@ -578,7 +578,7 @@ export default function Escort() {
                 { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
               );
             }
-            await SecureStore.removeItem('active_escort');
+            await AsyncStorage.removeItem('active_escort');
             setIsTracking(false); isTrackingRef.current = false;
             setSessionId(null); setStartTime(null);
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

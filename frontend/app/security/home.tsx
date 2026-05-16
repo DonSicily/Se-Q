@@ -40,10 +40,10 @@ export default function SecurityHome() {
 
   // ── Unread message polling (every 15 s) with sound alert ─────────────────
   useEffect(() => {
-    // Load sound preference from SecureStore
+    // Load sound preference from AsyncStorage
     const loadSoundPreference = async () => {
       try {
-        const enabled = await SecureStore.getItem('msg_sound_enabled');
+        const enabled = await AsyncStorage.getItem('msg_sound_enabled');
         setMessageSoundEnabled(enabled !== 'false'); // Default ON
       } catch (_) {}
     };

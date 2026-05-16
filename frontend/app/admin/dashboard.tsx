@@ -110,7 +110,7 @@ export default function AdminDashboard() {
 
         // Play sound alert when new messages arrive (if user hasn't disabled it)
         if (count > prevUnreadRef.current) {
-          const soundEnabled = await SecureStore.getItem('msg_sound_enabled');
+          const soundEnabled = await AsyncStorage.getItem('msg_sound_enabled');
           // Default ON unless explicitly set to 'false'
           if (soundEnabled !== 'false') {
             playMessageAlert();
