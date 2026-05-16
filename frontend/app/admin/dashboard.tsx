@@ -8,7 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getAuthToken, clearAuthData, getUserMetadata } from '../../utils/auth';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -111,7 +110,7 @@ export default function AdminDashboard() {
 
         // Play sound alert when new messages arrive (if user hasn't disabled it)
         if (count > prevUnreadRef.current) {
-          const soundEnabled = await AsyncStorage.getItem('msg_sound_enabled');
+          const soundEnabled = await SecureStore.getItem('msg_sound_enabled');
           // Default ON unless explicitly set to 'false'
           if (soundEnabled !== 'false') {
             playMessageAlert();

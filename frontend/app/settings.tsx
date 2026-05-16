@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthToken, clearAuthData } from '../utils/auth';
 import BACKEND_URL from '../utils/config';
 
@@ -47,7 +46,7 @@ export default function Settings() {
 
     // Load message sound preference
     try {
-      const soundEnabled = await AsyncStorage.getItem('msg_sound_enabled');
+      const soundEnabled = await SecureStore.getItem('msg_sound_enabled');
       setMessageSoundEnabled(soundEnabled !== 'false'); // Default ON
     } catch (_) {}
 
@@ -57,7 +56,7 @@ export default function Settings() {
 
   const toggleMessageSound = async (value: boolean) => {
     setMessageSoundEnabled(value);
-    await AsyncStorage.setItem('msg_sound_enabled', value ? 'true' : 'false');
+    await SecureStore.setItem('msg_sound_enabled', value ? 'true' : 'false');
     Alert.alert(
       value ? 'Sound Enabled' : 'Sound Disabled',
       value ? 'You will hear a sound for new messages.' : 'Message sound alerts are now off.'

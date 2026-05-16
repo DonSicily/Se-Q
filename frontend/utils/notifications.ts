@@ -1,7 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import BACKEND_URL from './config';
 import { getAuthToken } from './auth';
@@ -71,7 +70,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
  */
 export async function registerTokenWithServer(token: string): Promise<boolean> {
   try {
-    const authToken = await getAuthToken();   // ← was AsyncStorage.getItem('auth_token')
+    const authToken = await getAuthToken();   // ← was SecureStore.getItem('auth_token')
     if (!authToken) {
       console.log('No auth token available to register push token');
       return false;
@@ -88,7 +87,7 @@ export async function registerTokenWithServer(token: string): Promise<boolean> {
       }
     );
 
-    await AsyncStorage.setItem('push_token', token);
+    await SecureStore.setItem('push_token', token);
     console.log('Push token registered with server successfully');
     return true;
   } catch (error: any) {

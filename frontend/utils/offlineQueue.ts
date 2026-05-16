@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import axios from 'axios';
 import BACKEND_URL from './config';
@@ -27,7 +26,7 @@ export interface QueuedReport {
  */
 export async function getQueuedReports(): Promise<QueuedReport[]> {
   try {
-    const data = await AsyncStorage.getItem(QUEUE_KEY);
+    const data = await SecureStore.getItem(QUEUE_KEY);
     if (data) {
       return JSON.parse(data);
     }
@@ -51,7 +50,7 @@ export async function addToQueue(report: Omit<QueuedReport, 'id' | 'retryCount' 
       status: 'pending'
     };
     queue.push(newReport);
-    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    await SecureStore.setItem(QUEUE_KEY, JSON.stringify(queue));
     console.log('Report added to offline queue:', newReport.id);
     return newReport.id;
   } catch (error) {
@@ -69,7 +68,7 @@ export async function updateQueuedReport(id: string, updates: Partial<QueuedRepo
     const index = queue.findIndex(r => r.id === id);
     if (index !== -1) {
       queue[index] = { ...queue[index], ...updates };
-      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      await SecureStore.setItem(QUEUE_KEY, JSON.stringify(queue));
     }
   } catch (error) {
     console.error('Error updating queued report:', error);
@@ -83,7 +82,7 @@ export async function removeFromQueue(id: string): Promise<void> {
   try {
     const queue = await getQueuedReports();
     const filtered = queue.filter(r => r.id !== id);
-    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
+    await SecureStore.setItem(QUEUE_KEY, JSON.stringify(filtered));
     console.log('Report removed from queue:', id);
   } catch (error) {
     console.error('Error removing from queue:', error);
@@ -95,7 +94,7 @@ export async function removeFromQueue(id: string): Promise<void> {
  */
 export async function clearQueue(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(QUEUE_KEY);
+    await SecureStore.removeItem(QUEUE_KEY);
     console.log('Offline queue cleared');
   } catch (error) {
     console.error('Error clearing queue:', error);

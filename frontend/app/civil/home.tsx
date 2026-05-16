@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Audio } from 'expo-av';
 import { getPendingCount, processQueue } from '../../utils/offlineQueue';
@@ -60,7 +59,7 @@ export default function CivilHome() {
 
         // Play sound alert when new messages arrive (if user hasn't disabled it)
         if (count > prevUnreadRef.current) {
-          const soundEnabled = await AsyncStorage.getItem('msg_sound_enabled');
+          const soundEnabled = await SecureStore.getItem('msg_sound_enabled');
           // Default ON unless explicitly set to 'false'
           if (soundEnabled !== 'false') {
             playMessageAlert();
@@ -158,7 +157,7 @@ export default function CivilHome() {
       
       if (backendHasPanic) {
         // Sync local storage with backend
-        await AsyncStorage.setItem('active_panic', JSON.stringify({
+        await SecureStore.setItem('active_panic', JSON.stringify({
           panic_id: response.data.panic_id,
           activated_at: response.data.activated_at
         }));
@@ -167,7 +166,7 @@ export default function CivilHome() {
       } else {
         // No active panic on backend — clear ALL panic keys so the
         // escape-hatch in panic-active.tsx doesn't bounce the user away
-        await AsyncStorage.multiRemove([
+        await SecureStore.multiRemove([
           'active_panic', 'panic_active', 'panic_started_at', 'panic_id',
         ]);
         setHasActivePanic(false);
@@ -175,14 +174,14 @@ export default function CivilHome() {
       }
     } catch (err) {
       // Fallback to local storage if backend check fails
-      const activePanic = await AsyncStorage.getItem('active_panic');
+      const activePanic = await SecureStore.getItem('active_panic');
       setHasActivePanic(!!activePanic);
       console.log('[CivilHome] Backend panic check failed, using local:', !!activePanic);
     }
 
     // Load app customization
     try {
-      const customization = await AsyncStorage.getItem('app_customization');
+      const customization = await SecureStore.getItem('app_customization');
       if (customization) {
         const { app_name, app_logo } = JSON.parse(customization);
         if (app_name) setAppDisplayName(app_name);
@@ -309,7 +308,7 @@ export default function CivilHome() {
         }
 
         // Clear all local panic state
-        await AsyncStorage.multiRemove([
+        await SecureStore.multiRemove([
           'panic_active', 'panic_started_at', 'panic_id', 'active_panic',
         ]);
 

@@ -8,7 +8,6 @@ import axios from 'axios';
 import { getAuthToken, clearAuthData, getUserMetadata } from '../../utils/auth';
 import BACKEND_URL from '../../utils/config';
 import { AudioManager, setAlertAudioMode, restorePlaybackAudioMode } from '../../utils/AudioManager';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function SecurityHome() {
@@ -41,10 +40,10 @@ export default function SecurityHome() {
 
   // ── Unread message polling (every 15 s) with sound alert ─────────────────
   useEffect(() => {
-    // Load sound preference from AsyncStorage
+    // Load sound preference from SecureStore
     const loadSoundPreference = async () => {
       try {
-        const enabled = await AsyncStorage.getItem('msg_sound_enabled');
+        const enabled = await SecureStore.getItem('msg_sound_enabled');
         setMessageSoundEnabled(enabled !== 'false'); // Default ON
       } catch (_) {}
     };

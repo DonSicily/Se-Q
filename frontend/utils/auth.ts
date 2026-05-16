@@ -3,7 +3,6 @@
  * Centralized authentication handling for SafeGuard app
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
@@ -39,7 +38,7 @@ export const getAuthToken = async (): Promise<string | null> => {
         if (token) return token;
       } catch (_) {}
     }
-    return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    return await SecureStore.getItem(AUTH_TOKEN_KEY);
   } catch {
     return null;
   }
@@ -56,12 +55,12 @@ export const saveAuthData = async (data: {
       try {
         await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
       } catch (_) {
-        await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
       }
     } else {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
     }
-    await AsyncStorage.multiSet([
+    await SecureStore.multiSet([
       [USER_ID_KEY,    data.user_id],
       [USER_ROLE_KEY,  data.role],
       [IS_PREMIUM_KEY, String(data.is_premium || false)],
@@ -80,7 +79,7 @@ export const saveAuthData = async (data: {
  *    is NOT restored when the same user logs back in — the user
  *    intentionally logged out, so the escort should not resume.
  * 2. Unregisters push token.
- * 3. Clears JWT from SecureStore + AsyncStorage.
+ * 3. Clears JWT from SecureStore + SecureStore.
  * 4. Clears all session-state keys.
  */
 export const clearAuthData = async (): Promise<boolean> => {
@@ -128,7 +127,7 @@ export const clearAuthData = async (): Promise<boolean> => {
       try { await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY); } catch (_) {}
     }
 
-    await AsyncStorage.multiRemove([
+    await SecureStore.multiRemove([
       AUTH_TOKEN_KEY,
       USER_ID_KEY,
       USER_ROLE_KEY,
@@ -148,7 +147,7 @@ export const getUserMetadata = async (): Promise<{
   isPremium: boolean;
 }> => {
   try {
-    const results = await AsyncStorage.multiGet([USER_ID_KEY, USER_ROLE_KEY, IS_PREMIUM_KEY]);
+    const results = await SecureStore.multiGet([USER_ID_KEY, USER_ROLE_KEY, IS_PREMIUM_KEY]);
     const data: { [key: string]: string | null } = {};
     results.forEach(([key, value]) => { data[key] = value; });
     return {
