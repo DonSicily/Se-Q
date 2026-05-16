@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Animated, StatusBar } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Animated, StatusBar, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,34 @@ export default function Register() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const [stepIndicator] = useState(new Animated.Value(0));
+
+  // Theme colors based on role
+  const themeColors = {
+    civil: {
+      primary: '#10B981',      // Green
+      primaryLight: 'rgba(16, 185, 129, 0.1)',
+      primaryDark: '#059669',
+      accent: '#34D399',
+      iconColor: '#10B981',
+      inputBorder: 'rgba(16, 185, 129, 0.3)',
+      inputIconBg: 'rgba(16, 185, 129, 0.1)',
+      roleCardActive: 'rgba(16, 185, 129, 0.15)',
+      roleIconActive: 'rgba(16, 185, 129, 0.2)',
+    },
+    security: {
+      primary: '#F59E0B',     // Amber
+      primaryLight: 'rgba(245, 158, 11, 0.1)',
+      primaryDark: '#D97706',
+      accent: '#FBBF24',
+      iconColor: '#F59E0B',
+      inputBorder: 'rgba(245, 158, 11, 0.3)',
+      inputIconBg: 'rgba(245, 158, 11, 0.1)',
+      roleCardActive: 'rgba(245, 158, 11, 0.15)',
+      roleIconActive: 'rgba(245, 158, 11, 0.2)',
+    }
+  };
+
+  const currentTheme = themeColors[role as 'civil' | 'security'];
 
   useEffect(() => {
     Animated.parallel([
@@ -137,8 +165,8 @@ export default function Register() {
 
       {/* Background elements */}
       <View style={styles.gradientOverlay} />
-      <View style={styles.topRightGlow} />
-      <View style={styles.bottomLeftGlow} />
+      <View style={[styles.topRightGlow, { backgroundColor: currentTheme.primary }]} />
+      <View style={[styles.bottomLeftGlow, { backgroundColor: currentTheme.primaryDark }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
@@ -146,14 +174,16 @@ export default function Register() {
 
             {/* Header Section */}
             <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <TouchableOpacity style={[styles.backButton, { backgroundColor: currentTheme.primaryLight }]} onPress={() => router.back()}>
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
 
               <View style={styles.logoSection}>
-                <View style={styles.logoIcon}>
-                  <Ionicons name="shield-checkmark" size={32} color="#fff" />
-                </View>
+                <Image
+                  source={require('../../assets/images/login-logo.png')}
+                  style={styles.logoIcon}
+                  resizeMode="contain"
+                />
               </View>
 
               <Text style={styles.pageTitle}>Create Account</Text>
@@ -166,7 +196,10 @@ export default function Register() {
                 <View key={step} style={styles.progressStep}>
                   <View style={[
                     styles.progressDot,
-                    currentStep >= step && styles.progressDotActive
+                    {
+                      backgroundColor: currentStep >= step ? currentTheme.primary : 'rgba(99, 102, 241, 0.2)',
+                      borderColor: currentStep >= step ? currentTheme.primary : 'rgba(99, 102, 241, 0.3)',
+                    }
                   ]}>
                     {currentStep > step ? (
                       <Ionicons name="checkmark" size={12} color="#fff" />
@@ -177,7 +210,7 @@ export default function Register() {
                   {step < 3 && (
                     <View style={[
                       styles.progressLine,
-                      currentStep > step && styles.progressLineActive
+                      { backgroundColor: currentStep > step ? currentTheme.primary : 'rgba(99, 102, 241, 0.2)' }
                     ]} />
                   )}
                 </View>
@@ -196,27 +229,47 @@ export default function Register() {
                   <Text style={styles.stepTitle}>I am a:</Text>
                   <View style={styles.roleContainer}>
                     <TouchableOpacity
-                      style={[styles.roleCard, role === 'civil' && styles.roleCardActive]}
+                      style={[styles.roleCard, role === 'civil' && {
+                        backgroundColor: currentTheme.roleCardActive || 'rgba(16, 185, 129, 0.15)',
+                        borderColor: currentTheme.primary
+                      }]}
                       onPress={() => setRole('civil')}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.roleIconContainer, role === 'civil' && styles.roleIconActive]}>
-                        <Ionicons name="person" size={32} color={role === 'civil' ? '#6366F1' : '#64748B'} />
+                      <View style={[styles.roleIconContainer, {
+                        backgroundColor: role === 'civil' ? currentTheme.roleIconActive : 'rgba(99, 102, 241, 0.1)'
+                      }]}>
+                        <Ionicons name="person" size={32} color={role === 'civil' ? currentTheme.primary : '#64748B'} />
                       </View>
-                      <Text style={[styles.roleTitle, role === 'civil' && styles.roleTitleActive]}>Civil User</Text>
+                      <Text style={[styles.roleTitle, role === 'civil' && { color: '#fff' }]}>Civil User</Text>
                       <Text style={styles.roleDescription}>Personal safety and emergency response</Text>
+                      {role === 'civil' && (
+                        <View style={[styles.roleBadge, { backgroundColor: currentTheme.primary }]}>
+                          <Text style={styles.roleBadgeText}>Green Theme</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.roleCard, role === 'security' && styles.roleCardActive]}
+                      style={[styles.roleCard, role === 'security' && {
+                        backgroundColor: currentTheme.roleCardActive || 'rgba(245, 158, 11, 0.15)',
+                        borderColor: currentTheme.primary
+                      }]}
                       onPress={() => setRole('security')}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.roleIconContainer, role === 'security' && styles.roleIconActive]}>
-                        <Ionicons name="shield" size={32} color={role === 'security' ? '#6366F1' : '#64748B'} />
+                      <View style={[styles.roleIconContainer, {
+                        backgroundColor: role === 'security' ? currentTheme.roleIconActive : 'rgba(99, 102, 241, 0.1)'
+                      }]}>
+                        <Ionicons name="shield" size={32} color={role === 'security' ? currentTheme.primary : '#64748B'} />
                       </View>
-                      <Text style={[styles.roleTitle, role === 'security' && styles.roleTitleActive]}>Security Agency</Text>
+                      <Text style={[styles.roleTitle, role === 'security' && { color: '#fff' }]}>Security Agency</Text>
                       <Text style={styles.roleDescription}>Professional security services</Text>
+                      {role === 'security' && (
+                        <View style={[styles.roleBadge, { backgroundColor: currentTheme.primary }]}>
+                          <Text style={styles.roleBadgeText}>Amber Theme</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   </View>
 
@@ -229,22 +282,22 @@ export default function Register() {
                           onPress={() => setSecuritySubRole('supervisor')}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="star" size={24} color={securitySubRole === 'supervisor' ? '#F59E0B' : '#64748B'} />
-                          <Text style={[styles.subRoleText, securitySubRole === 'supervisor' && styles.subRoleTextActive]}>Supervisor</Text>
+                          <Ionicons name="star" size={24} color={securitySubRole === 'supervisor' ? currentTheme.primary : '#64748B'} />
+                          <Text style={[styles.subRoleText, securitySubRole === 'supervisor' && { color: currentTheme.primary }]}>Supervisor</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.subRoleCard, securitySubRole === 'team_member' && styles.subRoleCardActive]}
                           onPress={() => setSecuritySubRole('team_member')}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="people" size={24} color={securitySubRole === 'team_member' ? '#F59E0B' : '#64748B'} />
-                          <Text style={[styles.subRoleText, securitySubRole === 'team_member' && styles.subRoleTextActive]}>Team Member</Text>
+                          <Ionicons name="people" size={24} color={securitySubRole === 'team_member' ? currentTheme.primary : '#64748B'} />
+                          <Text style={[styles.subRoleText, securitySubRole === 'team_member' && { color: currentTheme.primary }]}>Team Member</Text>
                         </TouchableOpacity>
                       </View>
 
-                      <View style={styles.inputContainer}>
-                        <View style={styles.inputIconContainer}>
-                          <Ionicons name="key" size={20} color="#818CF8" />
+                      <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                        <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                          <Ionicons name="key" size={20} color={currentTheme.iconColor} />
                         </View>
                         <TextInput
                           style={styles.input}
@@ -257,9 +310,9 @@ export default function Register() {
                         />
                       </View>
 
-                      <View style={styles.inputContainer}>
-                        <View style={styles.inputIconContainer}>
-                          <Ionicons name="business" size={20} color="#818CF8" />
+                      <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                        <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                          <Ionicons name="business" size={20} color={currentTheme.iconColor} />
                         </View>
                         <TextInput
                           style={styles.input}
@@ -279,9 +332,9 @@ export default function Register() {
                 <View style={styles.stepContent}>
                   <Text style={styles.stepTitle}>Personal Information</Text>
 
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIconContainer}>
-                      <Ionicons name="person" size={20} color="#818CF8" />
+                  <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                    <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                      <Ionicons name="person" size={20} color={currentTheme.iconColor} />
                     </View>
                     <TextInput
                       style={styles.input}
@@ -293,9 +346,9 @@ export default function Register() {
                     />
                   </View>
 
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIconContainer}>
-                      <Ionicons name="call" size={20} color="#818CF8" />
+                  <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                    <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                      <Ionicons name="call" size={20} color={currentTheme.iconColor} />
                     </View>
                     <TextInput
                       style={styles.input}
@@ -314,9 +367,9 @@ export default function Register() {
                 <View style={styles.stepContent}>
                   <Text style={styles.stepTitle}>Account Details</Text>
 
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIconContainer}>
-                      <Ionicons name="mail" size={20} color="#818CF8" />
+                  <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                    <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                      <Ionicons name="mail" size={20} color={currentTheme.iconColor} />
                     </View>
                     <TextInput
                       style={styles.input}
@@ -330,9 +383,9 @@ export default function Register() {
                     />
                   </View>
 
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIconContainer}>
-                      <Ionicons name="lock-closed" size={20} color="#818CF8" />
+                  <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                    <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                      <Ionicons name="lock-closed" size={20} color={currentTheme.iconColor} />
                     </View>
                     <TextInput
                       style={styles.input}
@@ -356,9 +409,9 @@ export default function Register() {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIconContainer}>
-                      <Ionicons name="lock-closed" size={20} color="#818CF8" />
+                  <View style={[styles.inputContainer, { borderColor: currentTheme.inputBorder }]}>
+                    <View style={[styles.inputIconContainer, { backgroundColor: currentTheme.inputIconBg, borderRightColor: currentTheme.inputBorder }]}>
+                      <Ionicons name="lock-closed" size={20} color={currentTheme.iconColor} />
                     </View>
                     <TextInput
                       style={styles.input}
@@ -378,18 +431,18 @@ export default function Register() {
               <View style={styles.buttonContainer}>
                 {currentStep > 1 && (
                   <TouchableOpacity
-                    style={styles.prevButton}
+                    style={[styles.prevButton, { borderColor: currentTheme.inputBorder }]}
                     onPress={prevStep}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="arrow-back" size={20} color="#818CF8" />
-                    <Text style={styles.prevButtonText}>Back</Text>
+                    <Ionicons name="arrow-back" size={20} color={currentTheme.iconColor} />
+                    <Text style={[styles.prevButtonText, { color: currentTheme.iconColor }]}>Back</Text>
                   </TouchableOpacity>
                 )}
 
                 {currentStep < 3 ? (
                   <TouchableOpacity
-                    style={styles.nextButton}
+                    style={[styles.nextButton, { backgroundColor: currentTheme.primary }]}
                     onPress={nextStep}
                     activeOpacity={0.8}
                   >
@@ -398,7 +451,7 @@ export default function Register() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+                    style={[styles.registerButton, loading && styles.registerButtonDisabled, { backgroundColor: currentTheme.primary, shadowColor: currentTheme.primary }]}
                     onPress={handleRegister}
                     disabled={loading}
                     activeOpacity={0.8}
@@ -419,7 +472,7 @@ export default function Register() {
               <View style={styles.loginSection}>
                 <Text style={styles.loginText}>Already have an account? </Text>
                 <TouchableOpacity onPress={() => router.replace('/auth/login')}>
-                  <Text style={styles.loginLink}>Sign In</Text>
+                  <Text style={[styles.loginLink, { color: currentTheme.primary }]}>Sign In</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -450,7 +503,6 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    backgroundColor: '#6366F1',
     opacity: 0.08,
   },
   bottomLeftGlow: {
@@ -460,7 +512,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: '#4F46E5',
     opacity: 0.06,
   },
   safeArea: {
@@ -485,7 +536,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -496,13 +546,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
   },
   pageTitle: {
     fontSize: 28,
@@ -529,15 +572,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-  },
-  progressDotActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#818CF8',
   },
   progressDotText: {
     color: '#64748B',
@@ -547,12 +584,8 @@ const styles = StyleSheet.create({
   progressLine: {
     width: 60,
     height: 3,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
     marginHorizontal: 8,
     borderRadius: 2,
-  },
-  progressLineActive: {
-    backgroundColor: '#6366F1',
   },
   formScroll: {
     flex: 1,
@@ -583,21 +616,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(99, 102, 241, 0.2)',
   },
-  roleCardActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderColor: '#6366F1',
-  },
   roleIconContainer: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  roleIconActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
   },
   roleTitle: {
     fontSize: 16,
@@ -605,14 +630,22 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginBottom: 4,
   },
-  roleTitleActive: {
-    color: '#fff',
-  },
   roleDescription: {
     fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  roleBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  roleBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
   securityFields: {
     marginTop: 8,
@@ -652,7 +685,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
     marginBottom: 16,
     overflow: 'hidden',
   },
@@ -661,9 +693,7 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(99, 102, 241, 0.2)',
   },
   input: {
     flex: 1,
@@ -691,10 +721,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 18,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
   },
   prevButtonText: {
-    color: '#818CF8',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -704,7 +732,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#6366F1',
     borderRadius: 16,
     paddingVertical: 18,
   },
@@ -715,15 +742,14 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     flex: 2,
-    backgroundColor: '#10B981',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
+    elevation: 8,
   },
   registerButtonDisabled: {
     opacity: 0.7,
@@ -750,7 +776,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   loginLink: {
-    color: '#818CF8',
     fontSize: 15,
     fontWeight: '600',
   },
