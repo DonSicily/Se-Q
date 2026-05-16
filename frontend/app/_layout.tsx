@@ -1,4 +1,3 @@
-import * as AsyncStorage from "expo-secure-store";
 /**
  * _layout.tsx — Root layout
  *
@@ -41,6 +40,7 @@ import {
   AppState, AppStateStatus, View, Text,
   TouchableOpacity, Animated, StyleSheet,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { startQueueProcessor } from '../utils/offlineQueue';
@@ -260,34 +260,9 @@ function AppContent() {
     return () => { queueCleanup.current?.(); queueCleanup.current = null; };
   }, []);
 
-  // ── Silent push for security ping → location transmission ────────────────
-  // Configure notifications to be SILENT (no banners, sounds, or badges)
-  // These notifications ONLY trigger location transmission for security tracking
-  useEffect(() => {
-    // Set up silent notification handler for security pings
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: false,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-        shouldShowBanner: false,
-      }),
-    });
-
-    // Listen for silent push notifications (type: "ping")
-    const subscription = Notifications.addNotificationReceivedListener((notification) => {
-      const data = notification.request.content.data;
-      // When security pings, type="ping" triggers location transmission
-      if (data?.type === 'ping') {
-        sendPingLocation();
-      }
-    });
-
-    return () => subscription.remove();
-  }, []);
-
-  // Send location to backend when security pings
-  const sendPingLocation = async () => {
+  // ── Send location to backend when security pings ────────────────────
+  // IMPORTANT: Define this BEFORE the useEffect that uses it to avoid closure issues
+  const sendPingLocation = useCallback(async () => {
     try {
       const token = await getAuthToken();
       if (!token) return;
@@ -316,7 +291,33 @@ function AppContent() {
     } catch (err) {
       console.error('[Ping] Location transmission failed:', err);
     }
-  };
+  }, []);
+
+  // ── Silent push for security ping → location transmission ────────────────
+  // Configure notifications to be SILENT (no banners, sounds, or badges)
+  // These notifications ONLY trigger location transmission for security tracking
+  useEffect(() => {
+    // Set up silent notification handler for security pings
+    // NOTE: Only valid properties are shouldShowAlert, shouldPlaySound, shouldSetBadge
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+
+    // Listen for silent push notifications (type: "ping")
+    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data;
+      // When security pings, type="ping" triggers location transmission
+      if (data?.type === 'ping') {
+        sendPingLocation();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [sendPingLocation]);
 
   return (
     <View style={{ flex: 1 }}>
