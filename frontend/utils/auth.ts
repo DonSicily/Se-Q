@@ -51,40 +51,76 @@ export const saveAuthData = async (data: {
   is_premium?: boolean;
 }): Promise<boolean> => {
   try {
-    // Save auth token first
-    if (Platform.OS !== 'web') {
+    // Save auth token first - use async API for all platforms for consistency
+    if (Platform.OS === 'web') {
+      // Web platform: use async setItem API
       try {
         await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
       } catch (_) {
-        await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
+        // Fallback to sync for environments that don't support async
+        try {
+          SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
+        } catch (_2) {
+          console.error('[Auth] Web: Failed to save auth token');
+          return false;
+        }
       }
     } else {
-      await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
+      // Native platform: use async API with sync fallback
+      try {
+        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
+      } catch (_) {
+        try {
+          SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
+        } catch (_2) {
+          console.error('[Auth] Native: Failed to save auth token');
+          return false;
+        }
+      }
     }
 
-    // Save other user data
-    try {
-      await SecureStore.multiSet([
-        [USER_ID_KEY,    data.user_id],
-        [USER_ROLE_KEY,  data.role],
-        [IS_PREMIUM_KEY, String(data.is_premium || false)],
-      ]);
-    } catch (_) {
-      // Fallback: save individually
-      if (Platform.OS !== 'web') {
+    // Save other user data using async API for consistency
+    if (Platform.OS === 'web') {
+      // Web platform: try async first, fallback to sync
+      try {
+        await SecureStore.multiSet([
+          [USER_ID_KEY,    data.user_id],
+          [USER_ROLE_KEY,  data.role],
+          [IS_PREMIUM_KEY, String(data.is_premium || false)],
+        ]);
+      } catch (_) {
+        try {
+          SecureStore.setItem(USER_ID_KEY, data.user_id);
+          SecureStore.setItem(USER_ROLE_KEY, data.role);
+          SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
+        } catch (_2) {
+          console.error('[Auth] Web: Failed to save user data');
+          return false;
+        }
+      }
+    } else {
+      // Native platform: try async first, then sync fallback
+      try {
+        await SecureStore.multiSet([
+          [USER_ID_KEY,    data.user_id],
+          [USER_ROLE_KEY,  data.role],
+          [IS_PREMIUM_KEY, String(data.is_premium || false)],
+        ]);
+      } catch (_) {
         try {
           await SecureStore.setItemAsync(USER_ID_KEY, data.user_id);
           await SecureStore.setItemAsync(USER_ROLE_KEY, data.role);
           await SecureStore.setItemAsync(IS_PREMIUM_KEY, String(data.is_premium || false));
         } catch (_2) {
-          await SecureStore.setItem(USER_ID_KEY, data.user_id);
-          await SecureStore.setItem(USER_ROLE_KEY, data.role);
-          await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
+          try {
+            SecureStore.setItem(USER_ID_KEY, data.user_id);
+            SecureStore.setItem(USER_ROLE_KEY, data.role);
+            SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
+          } catch (_3) {
+            console.error('[Auth] Native: Failed to save user data after all fallbacks');
+            return false;
+          }
         }
-      } else {
-        await SecureStore.setItem(USER_ID_KEY, data.user_id);
-        await SecureStore.setItem(USER_ROLE_KEY, data.role);
-        await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
       }
     }
 
