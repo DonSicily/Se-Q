@@ -39,6 +39,9 @@ class MainActivity : ReactActivity() {
         }
         confirmPanicActivationToService()
         checkAndRequestBatteryOptimizationExemption()
+        // Mark session active so BootRestartService can detect login after reboot
+        // without needing to decrypt expo-secure-store's EncryptedSharedPreferences.
+        markSessionActive()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -96,11 +99,17 @@ class MainActivity : ReactActivity() {
 
     private fun confirmPanicActivationToService() {
         try {
-            val confirmIntent = Intent("SEQ_CONFIRM_PANIC_ACTIVATION").apply {
-                setPackage(packageName)
+            // ShakeDetectionService checks ACTION_CONFIRM_PANIC in onStartCommand,
+            // not as a broadcast — so we must use a service intent, not sendBroadcast.
+            val confirmIntent = Intent(this, ShakeDetectionService::class.java).apply {
+                action = ShakeDetectionService.ACTION_CONFIRM_PANIC
             }
-            sendBroadcast(confirmIntent)
-            Log.d(TAG, "Panic activation confirmation sent")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(confirmIntent)
+            } else {
+                startService(confirmIntent)
+            }
+            Log.d(TAG, "Panic activation confirmation sent to service")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send confirmation: ${e.message}")
         }
@@ -158,6 +167,17 @@ class MainActivity : ReactActivity() {
             BuildConfig.IS_NEW_ARCHITECTURE_ENABLED,
             object : DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled) {}
         )
+    }
+
+    private fun markSessionActive() {
+        try {
+            getSharedPreferences("seq_session_prefs", MODE_PRIVATE)
+                .edit()
+                .putBoolean("is_logged_in", true)
+                .apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to mark session active: ${e.message}")
+        }
     }
 
     override fun invokeDefaultOnBackPressed() {

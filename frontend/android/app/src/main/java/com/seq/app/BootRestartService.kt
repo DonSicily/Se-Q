@@ -1,4 +1,4 @@
-package com.saq.app
+package com.seq.app
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -69,35 +68,31 @@ class BootRestartService : Service() {
 
     // ── Core restore logic ────────────────────────────────────────────────────
     private fun restoreSeQProtection() {
-        val prefs = getSharedPreferences("RCTAsyncLocalStorage_V1", Context.MODE_PRIVATE)
+        // Panic state is written by ShakeDetectionService and SeqPanicModule into
+        // seq_shake_prefs SharedPreferences — this is the native source of truth,
+        // unaffected by the JS storage layer (expo-secure-store / AsyncStorage).
+        val shakePrefs = getSharedPreferences(ShakeDetectionService.PREFS_NAME, Context.MODE_PRIVATE)
+        val panicActive = shakePrefs.getBoolean(ShakeDetectionService.PREFS_KEY_PANIC_ACTIVE, false)
+        val pendingPanic = shakePrefs.getBoolean(ShakeDetectionService.PREFS_KEY_PENDING, false)
 
-        // Read panic state from AsyncStorage (React Native persists it here)
-        val panicActive = readAsyncStorageValue(prefs, "panic_active")
-        val activePanic = readAsyncStorageValue(prefs, "active_panic")
-        val authToken   = readAsyncStorageValue(prefs, "auth_token")
+        // Auth state: expo-secure-store writes to EncryptedSharedPreferences.
+        // We can't decrypt it from native, so use a separate lightweight marker
+        // that MainActivity writes on successful login.
+        val sessionPrefs = getSharedPreferences("seq_session_prefs", Context.MODE_PRIVATE)
+        val isLoggedIn = sessionPrefs.getBoolean("is_logged_in", false)
 
-        Log.d(TAG, "Panic active: $panicActive | Auth token present: ${authToken != null}")
+        Log.d(TAG, "Panic active: $panicActive | Pending: $pendingPanic | Logged in: $isLoggedIn")
 
         // Always restore the persistent SOS notification for logged-in users
-        if (authToken != null) {
+        if (isLoggedIn) {
             postSOSNotification()
         }
 
         // If a panic was running before reboot — post urgent reminder
-        if (panicActive == "true" || activePanic != null) {
-            val category = extractCategory(activePanic)
-            postPanicActiveNotification(category)
-            Log.d(TAG, "Panic was active before reboot — posted reminder (category: $category)")
+        if (panicActive || pendingPanic) {
+            postPanicActiveNotification("Emergency")
+            Log.d(TAG, "Panic was active before reboot — posted reminder")
         }
-    }
-
-    // ── AsyncStorage reader ───────────────────────────────────────────────────
-    // React Native's AsyncStorage on Android persists to SharedPreferences.
-    // The key format is the raw key string.
-    private fun readAsyncStorageValue(prefs: SharedPreferences, key: String): String? {
-        // Try both common RN AsyncStorage storage formats
-        return prefs.getString(key, null)
-            ?: getSharedPreferences("AsyncStorage", Context.MODE_PRIVATE).getString(key, null)
     }
 
     private fun extractCategory(activePanicJson: String?): String {
