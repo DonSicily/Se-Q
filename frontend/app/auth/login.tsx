@@ -33,6 +33,7 @@ export default function Login() {
         token:      response.data.token,
         user_id:    String(response.data.user_id),
         role:       response.data.role,
+        email:      response.data.email || email.trim().toLowerCase(),
         is_premium: response.data.is_premium,
       });
 
