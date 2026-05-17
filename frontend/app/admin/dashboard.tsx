@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '../../utils/asyncStorageShim';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   RefreshControl, Alert, ActivityIndicator, Animated, Modal, Platform,

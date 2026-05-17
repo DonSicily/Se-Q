@@ -41,6 +41,7 @@ export default function AdminLogin() {
         token: response.data.token,
         user_id: String(response.data.user_id),
         role: 'admin',
+        email: response.data.email || email.trim().toLowerCase(),
         is_premium: false
       });
 
