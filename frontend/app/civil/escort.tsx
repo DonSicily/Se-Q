@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '../../utils/asyncStorageShim';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
   AppState, Dimensions, Platform,

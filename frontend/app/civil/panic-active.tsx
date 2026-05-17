@@ -9,6 +9,7 @@
  *     user without requiring any visible on-screen text).
  */
 import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '../../utils/asyncStorageShim';
 import {
   View, Text, StyleSheet, Alert, BackHandler, Platform, Linking,
   AppState, AppStateStatus, Vibration,
