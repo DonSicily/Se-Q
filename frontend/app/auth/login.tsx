@@ -36,11 +36,11 @@ export default function Login() {
       }),
     ]).start();
 
-    // Subtle pulse animation for security icon
+    // Subtle pulse animation for logo
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.05,
+          toValue: 1.08,
           duration: 1500,
           useNativeDriver: true,
         }),
@@ -115,11 +115,9 @@ export default function Login() {
       <View style={styles.gradientOverlay} />
       <View style={styles.gradientOverlay2} />
 
-      {/* Decorative elements with red accents */}
+      {/* Decorative elements */}
       <View style={styles.topLeftGlow} />
       <View style={styles.bottomRightGlow} />
-      <View style={styles.redAccentTop} />
-      <View style={styles.redAccentBottom} />
 
       {/* Geometric pattern */}
       <View style={styles.geometricPattern}>
@@ -132,15 +130,17 @@ export default function Login() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
           <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
-            {/* Logo Section with actual logo image */}
+            {/* Logo Section */}
             <View style={styles.logoSection}>
               <Animated.View style={[styles.logoContainer, { transform: [{ scale: pulseAnim }] }]}>
                 <View style={styles.logoGlow} />
-                <Image
-                  source={require('../../assets/images/login-logo.png')}
-                  style={styles.logoImage}
-                  resizeMode="contain"
-                />
+                <View style={styles.logoIcon}>
+                  <Image
+                    source={require('../../assets/images/login-logo.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.logoRing} />
               </Animated.View>
               <Text style={styles.appName}>Se-Q</Text>
@@ -152,12 +152,9 @@ export default function Login() {
               <Text style={styles.welcomeTitle}>Welcome Back</Text>
               <Text style={styles.welcomeSubtitle}>Sign in to continue</Text>
 
-              {/* Email Input */}
+              {/* Email Input - Empty Icon */}
               <View style={styles.inputWrapper}>
                 <View style={styles.inputContainer}>
-                  <View style={styles.inputIconContainer}>
-                    <Ionicons name="mail" size={20} color="#EF4444" />
-                  </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Email Address"
@@ -171,12 +168,9 @@ export default function Login() {
                 </View>
               </View>
 
-              {/* Password Input */}
+              {/* Password Input - Empty Icon */}
               <View style={styles.inputWrapper}>
                 <View style={styles.inputContainer}>
-                  <View style={styles.inputIconContainer}>
-                    <Ionicons name="lock-closed" size={20} color="#EF4444" />
-                  </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
@@ -194,8 +188,8 @@ export default function Login() {
                   >
                     <Ionicons
                       name={showPassword ? 'eye-off' : 'eye'}
-                      size={20}
-                      color="#64748B"
+                      size={22}
+                      color="#818CF8"
                     />
                   </TouchableOpacity>
                 </View>
@@ -206,7 +200,7 @@ export default function Login() {
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
 
-              {/* Login Button with red accent */}
+              {/* Login Button */}
               <TouchableOpacity
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]}
                 onPress={handleLogin}
@@ -241,14 +235,14 @@ export default function Login() {
               </View>
             </View>
 
-            {/* Admin Portal Link with red accent */}
+            {/* Admin Portal Link */}
             <TouchableOpacity
               style={styles.adminPortalLink}
               onPress={() => router.push('/admin/login')}
               activeOpacity={0.7}
             >
               <View style={styles.adminIconContainer}>
-                <Ionicons name="shield" size={18} color="#EF4444" />
+                <Ionicons name="shield" size={18} color="#6366F1" />
               </View>
               <Text style={styles.adminPortalText}>Admin Portal</Text>
             </TouchableOpacity>
@@ -303,26 +297,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     opacity: 0.1,
   },
-  redAccentTop: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 80,
-    height: 4,
-    backgroundColor: '#EF4444',
-    borderRadius: 2,
-    opacity: 0.6,
-  },
-  redAccentBottom: {
-    position: 'absolute',
-    bottom: 150,
-    left: 20,
-    width: 60,
-    height: 4,
-    backgroundColor: '#EF4444',
-    borderRadius: 2,
-    opacity: 0.6,
-  },
   geometricPattern: {
     position: 'absolute',
     top: 60,
@@ -376,14 +350,21 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#EF4444',
-    opacity: 0.2,
+    backgroundColor: '#6366F1',
+    opacity: 0.3,
+  },
+  logoIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   logoImage: {
     width: 96,
     height: 96,
-    borderRadius: 48,
-    zIndex: 1,
   },
   logoRing: {
     position: 'absolute',
@@ -391,7 +372,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#F87171',
+    borderColor: '#818CF8',
     opacity: 0.5,
   },
   appName: {
@@ -432,27 +413,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
     overflow: 'hidden',
-  },
-  inputIconContainer: {
-    width: 56,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(239, 68, 68, 0.2)',
   },
   input: {
     flex: 1,
     color: '#fff',
     fontSize: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 18,
   },
   eyeButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 18,
   },
   forgotPassword: {
@@ -460,17 +432,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#F87171',
+    color: '#818CF8',
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#6366F1',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#EF4444',
+    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -517,7 +489,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   signUpButtonText: {
-    color: '#F87171',
+    color: '#818CF8',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -533,12 +505,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   adminPortalText: {
-    color: '#F87171',
+    color: '#818CF8',
     fontSize: 14,
     fontWeight: '500',
   },
