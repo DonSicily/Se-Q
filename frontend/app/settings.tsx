@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '../utils/asyncStorageShim';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Image, Modal, Switch } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
