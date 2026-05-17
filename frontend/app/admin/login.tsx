@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, StatusBar, Dimensions, Image } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import BACKEND_URL from '../../utils/config';
 
 const { width } = Dimensions.get('window');
 
-export default function AdminLogin() {
+export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +18,8 @@ export default function AdminLogin() {
 
   // Animation states
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(40));
-  const [scanlineAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+  const [pulseAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
     // Fade in animation
@@ -36,17 +36,24 @@ export default function AdminLogin() {
       }),
     ]).start();
 
-    // Subtle scanline effect for command center feel
-    const scanline = Animated.loop(
-      Animated.timing(scanlineAnim, {
-        toValue: 1,
-        duration: 3000,
-        useNativeDriver: false,
-      })
+    // Subtle pulse animation for logo
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.08,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
     );
-    scanline.start();
+    pulse.start();
 
-    return () => scanline.stop();
+    return () => pulse.stop();
   }, []);
 
   const handleLogin = async () => {
@@ -59,30 +66,34 @@ export default function AdminLogin() {
     await clearAuthData();
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/admin/login`, {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
         email: email.trim().toLowerCase(),
         password,
       }, { timeout: 15000 });
 
       const saved = await saveAuthData({
-        token: response.data.token,
-        user_id: String(response.data.user_id),
-        role: 'admin',
-        is_premium: false,
+        token:      response.data.token,
+        user_id:    String(response.data.user_id),
+        role:       response.data.role,
+        is_premium: response.data.is_premium,
       });
 
-      if (!saved) {
-        throw new Error('Failed to save authentication data');
+      if (!saved) throw new Error('Failed to save authentication data');
+
+      if (response.data.role === 'admin') {
+        router.replace('/admin/dashboard');
+      } else if (response.data.role === 'security') {
+        router.replace('/security/home');
+      } else {
+        router.replace('/civil/home');
       }
 
-      router.replace('/admin/dashboard');
     } catch (error: any) {
       let errorMessage = 'An unexpected error occurred';
-
       if (error.response) {
         errorMessage = error.response.data?.detail ||
                        error.response.data?.message ||
-                       'Invalid admin credentials.';
+                       'Invalid credentials. Please try again.';
       } else if (error.request) {
         errorMessage = 'Server is unreachable. Please check your internet connection.';
       } else if (error.code === 'ECONNABORTED') {
@@ -90,8 +101,7 @@ export default function AdminLogin() {
       } else {
         errorMessage = error.message || 'Login failed. Please try again.';
       }
-
-      Alert.alert('Access Denied', errorMessage);
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -101,103 +111,94 @@ export default function AdminLogin() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Command Center Background */}
-      <View style={styles.bgGradient} />
-      <View style={styles.bgGrid} />
+      {/* Background gradient effect using layers */}
+      <View style={styles.gradientOverlay} />
+      <View style={styles.gradientOverlay2} />
 
-      {/* Top accent glow */}
-      <View style={styles.topGlow} />
+      {/* Decorative elements */}
+      <View style={styles.topLeftGlow} />
+      <View style={styles.bottomRightGlow} />
 
-      {/* Corner accents - Upper corners */}
-      <View style={styles.cornerTL} />
-      <View style={styles.cornerTR} />
-
-      {/* Corner accents - Lower corners (brought up for visibility) */}
-      <View style={styles.cornerBL} />
-      <View style={styles.cornerBR} />
-
-      {/* Bottom border line (raised for visibility) */}
-      <View style={styles.bottomBorderLine} />
-      <View style={styles.bottomBorderLineLeft} />
-      <View style={styles.bottomBorderLineRight} />
+      {/* Geometric pattern */}
+      <View style={styles.geometricPattern}>
+        <View style={styles.hexagon} />
+        <View style={[styles.hexagon, styles.hexagon2]} />
+        <View style={[styles.hexagon, styles.hexagon3]} />
+      </View>
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
           <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
-            {/* Header Section */}
-            <View style={styles.headerSection}>
-              {/* Shield Icon with Ring */}
-              <View style={styles.shieldContainer}>
-                <View style={styles.shieldOuterRing} />
-                <View style={styles.shieldMiddleRing} />
-                <View style={styles.shieldIcon}>
-                  <Ionicons name="shield-checkmark" size={40} color="#fff" />
+            {/* Logo Section */}
+            <View style={styles.logoSection}>
+              <Animated.View style={[styles.logoContainer, { transform: [{ scale: pulseAnim }] }]}>
+                <View style={styles.logoGlow} />
+                <View style={styles.logoIcon}>
+                  <Image
+                    source={require('../../assets/images/login-logo.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
                 </View>
-                <View style={styles.scanLine} />
-              </View>
-
-              {/* Title */}
-              <View style={styles.titleContainer}>
-                <Text style={styles.titleTop}>ADMIN PORTAL</Text>
-                <Text style={styles.titleSub}>Se-Q Management Console</Text>
-              </View>
-
-              {/* Status Badge */}
-              <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>SECURE CONNECTION</Text>
-              </View>
+                <View style={styles.logoRing} />
+              </Animated.View>
+              <Text style={styles.appName}>Se-Q</Text>
+              <Text style={styles.tagline}>Your Safety, Our Priority</Text>
             </View>
 
             {/* Form Section */}
             <View style={styles.formSection}>
-              <Text style={styles.formTitle}>Authenticate</Text>
+              <Text style={styles.welcomeTitle}>Welcome Back</Text>
+              <Text style={styles.welcomeSubtitle}>Sign in to continue</Text>
 
-              {/* Email Field */}
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIconWrap}>
-                  <Ionicons name="person" size={20} color="#A78BFA" />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Administrator Email"
-                  placeholderTextColor="#6B7280"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              {/* Password Field */}
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIconWrap}>
-                  <Ionicons name="key" size={20} color="#A78BFA" />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#6B7280"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color="#6B7280"
+              {/* Email Input - Empty Icon */}
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email Address"
+                    placeholderTextColor="#64748B"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
-                </TouchableOpacity>
+                </View>
               </View>
+
+              {/* Password Input - Empty Icon */}
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#64748B"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={22}
+                      color="#818CF8"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Forgot Password */}
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
               {/* Login Button */}
               <TouchableOpacity
@@ -210,32 +211,41 @@ export default function AdminLogin() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <View style={styles.loginButtonContent}>
-                    <Ionicons name="log-in" size={20} color="#fff" />
-                    <Text style={styles.loginButtonText}>Access Dashboard</Text>
+                    <Text style={styles.loginButtonText}>Sign In</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#fff" />
                   </View>
                 )}
               </TouchableOpacity>
-            </View>
 
-            {/* Footer Section */}
-            <View style={styles.footerSection}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.replace('/auth/login')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.backIconContainer}>
-                  <Ionicons name="arrow-back" size={18} color="#8B5CF6" />
-                </View>
-                <Text style={styles.backText}>Return to App Login</Text>
-              </TouchableOpacity>
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-              {/* Security Notice */}
-              <View style={styles.securityNotice}>
-                <Ionicons name="lock-closed" size={14} color="#4B5563" />
-                <Text style={styles.securityText}>All access attempts are logged and monitored</Text>
+              {/* Sign Up Link */}
+              <View style={styles.signUpSection}>
+                <Text style={styles.signUpText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/auth/register')}>
+                  <View style={styles.signUpButton}>
+                    <Text style={styles.signUpButtonText}>Sign Up</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
             </View>
+
+            {/* Admin Portal Link */}
+            <TouchableOpacity
+              style={styles.adminPortalLink}
+              onPress={() => router.push('/admin/login')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.adminIconContainer}>
+                <Ionicons name="shield" size={18} color="#6366F1" />
+              </View>
+              <Text style={styles.adminPortalText}>Admin Portal</Text>
+            </TouchableOpacity>
 
           </Animated.View>
         </KeyboardAvoidingView>
@@ -247,105 +257,73 @@ export default function AdminLogin() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: '#0A0E21',
   },
-  bgGradient: {
+  gradientOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    height: '60%',
+    backgroundColor: '#1E1B4B',
+    opacity: 0.6,
+  },
+  gradientOverlay2: {
+    position: 'absolute',
     bottom: 0,
-    backgroundColor: '#0A0A0F',
-  },
-  bgGrid: {
-    position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    opacity: 0.03,
-    borderWidth: 1,
-    borderColor: '#6366F1',
+    height: '50%',
+    backgroundColor: '#312E81',
+    opacity: 0.3,
   },
-  topGlow: {
+  topLeftGlow: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: -100,
+    left: -100,
+    width: 300,
     height: 300,
+    borderRadius: 150,
     backgroundColor: '#6366F1',
-    opacity: 0.05,
+    opacity: 0.15,
   },
-  cornerTL: {
+  bottomRightGlow: {
     position: 'absolute',
-    top: 40,
-    left: 24,
+    bottom: -150,
+    right: -100,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: '#4F46E5',
+    opacity: 0.1,
+  },
+  geometricPattern: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    opacity: 0.1,
+  },
+  hexagon: {
     width: 60,
     height: 60,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-    borderColor: '#6366F1',
-    opacity: 0.5,
-  },
-  cornerTR: {
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#818CF8',
     position: 'absolute',
-    top: 40,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRightWidth: 2,
-    borderTopWidth: 2,
-    borderColor: '#6366F1',
-    opacity: 0.5,
   },
-  cornerBL: {
-    position: 'absolute',
-    bottom: 120,
-    left: 24,
-    width: 60,
-    height: 60,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: '#6366F1',
-    opacity: 0.5,
+  hexagon2: {
+    top: 50,
+    right: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
-  cornerBR: {
-    position: 'absolute',
-    bottom: 120,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: '#6366F1',
-    opacity: 0.5,
-  },
-  bottomBorderLine: {
-    position: 'absolute',
-    bottom: 80,
-    left: 24,
-    right: 24,
-    height: 2,
-    backgroundColor: '#6366F1',
-    opacity: 0.4,
-  },
-  bottomBorderLineLeft: {
-    position: 'absolute',
-    bottom: 80,
-    left: 24,
-    width: 2,
-    height: 30,
-    backgroundColor: '#6366F1',
-    opacity: 0.4,
-  },
-  bottomBorderLineRight: {
-    position: 'absolute',
-    bottom: 80,
-    right: 24,
-    width: 2,
-    height: 30,
-    backgroundColor: '#6366F1',
-    opacity: 0.4,
+  hexagon3: {
+    top: 20,
+    right: 80,
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
   },
   safeArea: {
     flex: 1,
@@ -358,141 +336,113 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: 'center',
   },
-  headerSection: {
+  logoSection: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
-  shieldContainer: {
-    width: 120,
-    height: 120,
+  logoContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
   },
-  shieldOuterRing: {
+  logoGlow: {
     position: 'absolute',
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: '#6366F1',
+    opacity: 0.3,
   },
-  shieldMiddleRing: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.5)',
-  },
-  shieldIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#8B5CF6',
+  logoIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    zIndex: 1,
   },
-  scanLine: {
+  logoImage: {
+    width: 96,
+    height: 96,
+  },
+  logoRing: {
     position: 'absolute',
-    width: 80,
-    height: 2,
-    backgroundColor: '#A78BFA',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: '#818CF8',
     opacity: 0.5,
   },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  titleTop: {
-    fontSize: 28,
+  appName: {
+    fontSize: 42,
     fontWeight: '800',
     color: '#fff',
-    letterSpacing: 6,
-    marginBottom: 4,
+    letterSpacing: 4,
+    marginTop: 8,
   },
-  titleSub: {
+  tagline: {
     fontSize: 14,
-    color: '#6B7280',
-    letterSpacing: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    gap: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-  },
-  statusText: {
-    fontSize: 11,
-    color: '#10B981',
-    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 4,
     letterSpacing: 1,
   },
   formSection: {
-    marginBottom: 40,
+    marginBottom: 32,
   },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#9CA3AF',
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
     textAlign: 'center',
-    marginBottom: 24,
-    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  inputWrapper: {
+    marginBottom: 16,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 30, 45, 0.8)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-    marginBottom: 16,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
     overflow: 'hidden',
-  },
-  inputIconWrap: {
-    width: 52,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(139, 92, 246, 0.2)',
   },
   input: {
     flex: 1,
     color: '#fff',
     fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
   eyeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+  },
+  forgotPasswordText: {
+    color: '#818CF8',
+    fontSize: 14,
+    fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 12,
+    backgroundColor: '#6366F1',
+    borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: '#8B5CF6',
+    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -504,47 +454,64 @@ const styles = StyleSheet.create({
   loginButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    letterSpacing: 1,
   },
-  footerSection: {
-    alignItems: 'center',
-  },
-  backButton: {
+  divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    marginBottom: 24,
+    marginVertical: 24,
+    gap: 16,
   },
-  backIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(148, 163, 184, 0.2)',
+  },
+  dividerText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+  signUpSection: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backText: {
-    color: '#8B5CF6',
-    fontSize: 14,
-    fontWeight: '500',
+  signUpText: {
+    color: '#94A3B8',
+    fontSize: 15,
   },
-  securityNotice: {
+  signUpButton: {
+    paddingHorizontal: 8,
+  },
+  signUpButtonText: {
+    color: '#818CF8',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  adminPortalLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    marginTop: 16,
   },
-  securityText: {
-    fontSize: 11,
-    color: '#4B5563',
-    letterSpacing: 0.5,
+  adminIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminPortalText: {
+    color: '#818CF8',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
