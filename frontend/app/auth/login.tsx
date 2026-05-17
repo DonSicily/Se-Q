@@ -124,7 +124,7 @@ export default function Login() {
                   <Ionicons
                     name={showPassword ? 'eye-off' : 'eye'}
                     size={22}
-                    color="#818CF8"
+                    color="#22C55E"
                   />
                 </TouchableOpacity>
               </View>
@@ -145,10 +145,7 @@ export default function Login() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <View style={styles.loginButtonContent}>
-                  <Text style={styles.loginButtonText}>Sign In</Text>
-                  <Text style={styles.arrow}>→</Text>
-                </View>
+                <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
 
@@ -233,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
     overflow: 'hidden',
   },
   input: {
@@ -252,17 +249,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#818CF8',
+    color: '#22C55E',
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#22C55E',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366F1',
+    shadowColor: '#22C55E',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -271,19 +268,10 @@ const styles = StyleSheet.create({
   loginButtonDisabled: {
     opacity: 0.7,
   },
-  loginButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   loginButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-  },
-  arrow: {
-    color: '#fff',
-    fontSize: 18,
   },
   divider: {
     flexDirection: 'row',
@@ -310,7 +298,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   signUpLink: {
-    color: '#818CF8',
+    color: '#22C55E',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -326,7 +314,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -334,7 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   adminPortalText: {
-    color: '#818CF8',
+    color: '#22C55E',
     fontSize: 14,
     fontWeight: '500',
   },

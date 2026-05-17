@@ -543,9 +543,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 156,
+    height: 52,
   },
   pageTitle: {
     fontSize: 28,
