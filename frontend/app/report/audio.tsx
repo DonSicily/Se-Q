@@ -7,6 +7,7 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { getAuthToken, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import BACKEND_URL from '../../utils/config';
 import { addToQueue, isOnline } from '../../utils/offlineQueue';
 import { setRecordingAudioMode, restorePlaybackAudioMode } from '../../utils/AudioManager';
@@ -85,27 +86,22 @@ export default function AudioReport() {
       
       setHasPermission(audioStatus === 'granted');
       
+      // FIX: replaced direct getCurrentPositionAsync (no timeout) and hardcoded
+      // Nigeria fallback (9.0820, 8.6753) with getLocation() which has a timeout
+      // and last-known fallback. If GPS is unavailable, we leave location as null
+      // rather than storing a wrong hardcoded coord — submitReport() will retry
+      // and show a proper error if still null at submission time.
       if (locationStatus === 'granted') {
-        try {
-          const loc = await Location.getCurrentPositionAsync({ 
-            accuracy: Location.Accuracy.High,
-            timeInterval: 5000,
-            distanceInterval: 0
-          });
-          setLocation(loc);
-          console.log('Location obtained:', loc.coords.latitude, loc.coords.longitude);
-        } catch (locError: any) {
-          console.error('Location error:', locError);
-          Alert.alert(
-            'Location Service Required',
-            'Please enable Location Services in your device settings to get accurate location for reports.',
-            [{ text: 'OK' }]
-          );
-          setLocation({ coords: { latitude: 9.0820, longitude: 8.6753 } } as any);
+        const coords = await getLocation('soft');
+        if (coords) {
+          setLocation({ coords: { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy } } as any);
+          console.log('[AudioReport] Location obtained:', coords.latitude, coords.longitude);
+        } else {
+          console.warn('[AudioReport] GPS unavailable at init — will retry at submit');
+          // Don't set a hardcoded fallback — leave location null; submitReport retries
         }
-      } else {
-        setLocation({ coords: { latitude: 9.0820, longitude: 8.6753 } } as any);
       }
+      // If permission denied, leave location null — submitReport will show error
     } catch (error) {
       console.error('Permission error:', error);
     }
@@ -170,13 +166,24 @@ export default function AudioReport() {
 
     setLoading(true);
     try {
-      let currentLocation = location;
-      if (!currentLocation) {
-        try {
-          currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        } catch {
-          currentLocation = { coords: { latitude: 9.0820, longitude: 8.6753 } };
-        }
+      // FIX: old code fell back to hardcoded coords (9.0820, 8.6753 — geographic
+      // centre of Nigeria) when GPS failed, placing every audio report at that
+      // single wrong point on the map.
+      // New: use the shared getLocation() utility. If GPS is truly unavailable,
+      // we block submission and show an actionable error instead of lying about
+      // the location.
+      let reportCoords = location
+        ? { latitude: location.coords.latitude, longitude: location.coords.longitude, accuracy: location.coords.accuracy ?? null }
+        : await getLocation('soft');
+
+      if (!reportCoords) {
+        Alert.alert(
+          'Location Required',
+          'Unable to get your location. Please enable GPS and try again.',
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
       }
 
       const token = await getAuthToken();
@@ -191,8 +198,8 @@ export default function AudioReport() {
           localUri: audioUri,
           caption: caption || 'Audio security report',
           isAnonymous,
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
+          latitude: reportCoords.latitude,
+          longitude: reportCoords.longitude,
           duration_seconds: recordingDuration,
           timestamp: new Date().toISOString(),
         });
@@ -236,8 +243,8 @@ export default function AudioReport() {
           localUri: audioUri,
           caption: caption || 'Audio security report',
           isAnonymous,
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
+          latitude: reportCoords.latitude,
+          longitude: reportCoords.longitude,
           duration_seconds: recordingDuration,
           timestamp: new Date().toISOString(),
         });
@@ -258,8 +265,8 @@ export default function AudioReport() {
           is_anonymous: isAnonymous,
           file_url: serverFileUrl,
           uploaded: true,
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
+          latitude: reportCoords.latitude,
+          longitude: reportCoords.longitude,
           duration_seconds: recordingDuration,
         },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }

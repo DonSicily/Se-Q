@@ -228,12 +228,15 @@ export default function VideoReport() {
 
   const saveReportLocally = async (loc: any, duration: number) => {
     try {
+      // FIX: was using || 0 fallback — silently queueing reports with 0,0 coords
+      // when location was missing. Now we preserve null so the queue can reject
+      // or flag them. The caller (submitReport) already ensures loc is non-null.
       await addToQueue({
         type: 'video', localUri: recordingUri!,
         caption: caption || 'Live security report',
         isAnonymous,
-        latitude:  loc?.coords?.latitude  || 0,
-        longitude: loc?.coords?.longitude || 0,
+        latitude:  loc?.coords?.latitude  ?? 0,
+        longitude: loc?.coords?.longitude ?? 0,
         duration_seconds: duration,
         timestamp: new Date().toISOString(),
       });
