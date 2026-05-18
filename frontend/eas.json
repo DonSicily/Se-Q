@@ -9,7 +9,25 @@
         "buildType": "apk"
       },
       "env": {
-        "MAPBOX_DOWNLOADS_TOKEN": "pk.eyJ1IjoibmFiYWJ5IiwiYSI6ImNtYnE2YTFhbzBhMjQyanM0ZHU2ZmRldnEifQ.dB6j2R3vI7mXK1qI9rLw"
+        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
+      }
+    },
+    "preview": {
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "env": {
+        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
+      }
+    },
+    "development": {
+      "node": "20.19.4",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
       }
     }
   },
