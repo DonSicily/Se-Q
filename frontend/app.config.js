@@ -1,51 +1,40 @@
-/**
- * app.config.js
- *
- * MAPBOX TOKEN SETUP:
- *   The Mapbox Maps Android SDK reads mapbox_access_token from Android string
- *   resources at NATIVE INIT TIME — before any JS runs. Without it the app
- *   crashes with MapboxConfigurationException on any screen that shows a map.
- *
- *   Steps:
- *     1. Get your token from https://account.mapbox.com/access-tokens/
- *     2. Add it as an EAS secret:
- *          eas secret create MAPBOX_ACCESS_TOKEN pk.eyJ1...your_token
- *     3. Rebuild: eas build --platform android
- *
- *   The withMapboxToken plugin below injects the token into
- *   android/app/src/main/res/values/strings.xml at build time so the
- *   native Mapbox SDK can read it at startup.
- */
-
 const { withStringsXml } = require('@expo/config-plugins');
 
-// Read token from EAS secret (injected as env var during eas build) or local .env
+// Read token from environment
 const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
 
-// Validate token is present (fail build early if missing)
-if (!MAPBOX_TOKEN && process.env.CI) {
-  console.error('❌ ERROR: MAPBOX_ACCESS_TOKEN environment variable is not set!');
-  console.error('   Run: eas secret create MAPBOX_ACCESS_TOKEN pk.your_token_here');
-  process.exit(1);
-}
+// ========== VERIFICATION CODE ==========
+console.log('\n🔍 VERIFYING MAPBOX CONFIGURATION:');
+console.log(`   Token present: ${MAPBOX_TOKEN ? '✅ YES' : '❌ NO'}`);
+console.log(`   Token length: ${MAPBOX_TOKEN.length} characters`);
+console.log(`   Token prefix: ${MAPBOX_TOKEN.substring(0, 15)}...`);
+console.log(`   EAS Build: ${process.env.EAS_BUILD ? '✅ YES' : '❌ NO'}`);
+console.log('');
 
-/**
- * Expo config plugin: writes mapbox_access_token into Android strings.xml.
- * The native MapController reads this resource before any JS runs —
- * calling Mapbox.setAccessToken() from JS alone is NOT sufficient on Android.
- */
+// Fail fast in CI if token is missing
+if (!MAPBOX_TOKEN && process.env.EAS_BUILD === 'true') {
+  throw new Error('❌ FATAL: MAPBOX_ACCESS_TOKEN is required for EAS Build!');
+}
+// ======================================
+
 const withMapboxToken = (config) => {
+  console.log('📝 Running withMapboxToken plugin...');
+  
   return withStringsXml(config, (mod) => {
     const strings = mod.modResults.resources.string || [];
-    // Remove any stale entry to avoid duplicates on repeated builds
-    mod.modResults.resources.string = strings.filter(
+    
+    // Remove stale entry
+    const filtered = strings.filter(
       (item) => item.$ && item.$.name !== 'mapbox_access_token'
     );
-    mod.modResults.resources.string.push({
+    
+    // Add new token
+    filtered.push({
       $: { name: 'mapbox_access_token', translatable: 'false' },
-      _: MAPBOX_TOKEN || 'PASTE_YOUR_MAPBOX_TOKEN_HERE',
+      _: MAPBOX_TOKEN || 'TOKEN_MISSING_CHECK_EAS_CONFIG',
     });
     
+    mod.modResults.resources.string = filtered;
     console.log(`✅ Injected Mapbox token into strings.xml (length: ${MAPBOX_TOKEN.length})`);
     return mod;
   });
@@ -94,15 +83,11 @@ module.exports = {
     },
     extra: {
       eas: {
-        // ✅ FIXED: Use the correct project ID from your build error
         projectId: "374e4bfb-9d3d-4525-9d6e-7f27b51a7a79"
       },
       backendUrl: "https://se-q-production.up.railway.app",
-      // JS layer reads this via Constants.expoConfig.extra.mapboxToken
       mapboxToken: MAPBOX_TOKEN,
     },
-    plugins: [
-      withMapboxToken,
-    ],
+    plugins: [withMapboxToken],
   }
 };
