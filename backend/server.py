@@ -138,8 +138,13 @@ class LocationPoint(BaseModel):
     emergency_category: Optional[str] = None
 
 class PanicActivateRequest(BaseModel):
-    latitude: float
-    longitude: float
+    # FIX: latitude and longitude are now Optional.
+    # The frontend (panic-shake / panic-active) previously sent 0,0 when GPS was
+    # unavailable. It now sends null, which is semantically correct.
+    # The backend stores None in current_location and security dashboards show
+    # "Location pending" until the background GPS task delivers the real fix.
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     accuracy: Optional[float] = None
     emergency_category: str = "other"
     ambient_audio_base64: Optional[str] = None
@@ -407,19 +412,23 @@ async def activate_panic(request: Request, req: PanicActivateRequest, user = Dep
         "activated_at": now,
         "deactivated_at": None,
         "emergency_category": req.emergency_category,
+        # FIX: store None when GPS was unavailable at activation time.
+        # The background task (panic/location) will update current_location
+        # with the real fix once the device acquires GPS.
         "current_location": {
-            "latitude": req.latitude,
+            "latitude":  req.latitude,
             "longitude": req.longitude,
-            "accuracy": req.accuracy,
-            "timestamp": now.isoformat()
+            "accuracy":  req.accuracy,
+            "timestamp": now.isoformat(),
+            "is_initial": True,
         },
         "location_history": [{
-            "latitude": req.latitude,
+            "latitude":  req.latitude,
             "longitude": req.longitude,
-            "accuracy": req.accuracy,
-            "timestamp": now.isoformat()
-        }],
-        "location_count": 1,
+            "accuracy":  req.accuracy,
+            "timestamp": now.isoformat(),
+        }] if req.latitude is not None else [],
+        "location_count": 1 if req.latitude is not None else 0,
         "ambient_audio_url": audio_url
     }
     
