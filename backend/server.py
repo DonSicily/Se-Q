@@ -2027,13 +2027,20 @@ async def security_nearby_security(user=Depends(get_current_user)):
     cursor = db.users.find({"role": "security", "is_visible": {"$ne": False}, "is_active": True})
     agents = []
     async for u in cursor:
+        # Prefer live current_location (set by update-location), fall back to saved team_location
         loc = u.get("current_location") or u.get("team_location") or {}
+        lat = loc.get("latitude")
+        lng = loc.get("longitude")
         agents.append({
-            "id":        str(u["_id"]),
-            "full_name": u.get("full_name"),
-            "status":    u.get("status", "available"),
-            "latitude":  loc.get("latitude"),
-            "longitude": loc.get("longitude"),
+            "id":               str(u["_id"]),
+            "full_name":        u.get("full_name"),
+            "status":           u.get("status", "available"),
+            "security_sub_role": u.get("security_sub_role"),
+            "team_name":        u.get("team_name"),
+            "latitude":         lat,
+            "longitude":        lng,
+            # GeoJSON-style location so frontend map markers work with coordinates[0/1]
+            "location": {"coordinates": [lng, lat]} if lat is not None and lng is not None else None,
         })
     return {"agents": agents}
 
