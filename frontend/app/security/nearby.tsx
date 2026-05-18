@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { getAuthToken, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import { NativeMap } from '../../components/NativeMap';
 import BACKEND_URL from '../../utils/config';
 
@@ -31,50 +32,36 @@ export default function SecurityNearby() {
 
   const updateMyLocation = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationError('Location permission denied');
-        return false;
-      }
-
-      // Accuracy.High with no timeout hangs on cold GPS — use timeout + last-known fallback
-      let location: Location.LocationObject | null = null;
-      try {
-        location = await Promise.race([
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('GPS timeout')), 10000)
-          ),
-        ]) as Location.LocationObject;
-      } catch {
-        location = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 });
-      }
-      if (!location) {
+      // FIX: use shared getLocation() — standardises timeout (12s) + last-known fallback
+      // and removes the duplicated permission + race logic that was here before.
+      const coords = await getLocation('soft');
+      if (!coords) {
         setLocationError('Unable to determine location. Please enable GPS and try again.');
         return false;
       }
+
       const token = await getAuthToken();
-      
       if (!token) {
         router.replace('/auth/login');
         return false;
       }
-      
+
       await axios.post(`${BACKEND_URL}/api/security/update-location`, {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        accuracy: location.coords.accuracy
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
       }, {
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000
+        timeout: 10000,
       });
 
-      setMyLocation(location.coords);
+      setMyLocation(coords);
       setLocationError('');
       return true;
     } catch (error: any) {
       console.error('Location update error:', error);
-      setLocationError(error.message || 'Failed to update location');
+      const msg = error?.response?.data?.detail || error.message || 'Failed to update location';
+      setLocationError(msg);
       return false;
     }
   };

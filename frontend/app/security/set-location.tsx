@@ -8,6 +8,7 @@ import axios from 'axios';
 import Slider from '@react-native-community/slider';
 import { NativeMap } from '../../components/NativeMap';
 import { getAuthToken, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import BACKEND_URL from '../../utils/config';
 
 
@@ -37,31 +38,16 @@ export default function SetLocation() {
   const getMyCurrentLocation = async () => {
     setLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      // FIX: use shared getLocation() — eliminates duplicated permission + race logic.
+      const coords = await getLocation('soft');
+      if (!coords) {
+        // GPS unavailable — fall back to saved team location
         await loadSavedLocation();
         return;
       }
-      // BestForNavigation hangs indefinitely on Android — use timeout + last-known fallback
-      let location: Location.LocationObject | null = null;
-      try {
-        location = await Promise.race([
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('GPS timeout')), 12000)
-          ),
-        ]) as Location.LocationObject;
-      } catch {
-        location = await Location.getLastKnownPositionAsync({ maxAge: 10 * 60 * 1000 });
-      }
-      if (!location) {
-        await loadSavedLocation();
-        return;
-      }
-      const coords = { latitude: location.coords.latitude, longitude: location.coords.longitude };
       hasGotGPS.current = true;
-      setMarkerCoords(coords);
-      setRegion({ ...coords, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+      setMarkerCoords({ latitude: coords.latitude, longitude: coords.longitude });
+      setRegion({ latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
       setLocationSource('gps');
     } catch (error) {
       console.error('[SetLocation] GPS failed:', error);
