@@ -335,8 +335,17 @@ export default function SecurityHome() {
       return;
     }
 
-    // Get current user ID for "You Responded" comparison
+    // FIX (session-bleed): enforce role — a civil or admin user who somehow
+    // lands on /security/home must be redirected to their own dashboard.
     const metadata = await getUserMetadata();
+    if (metadata.role === 'civil') {
+      router.replace('/civil/home');
+      return;
+    }
+    if (metadata.role === 'admin') {
+      router.replace('/admin/dashboard');
+      return;
+    }
     setCurrentUserId(metadata?.userId || null);
 
     await loadAgentProfile();
