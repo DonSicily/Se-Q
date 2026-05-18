@@ -81,7 +81,8 @@ export default function SecurityNearby() {
 
   const loadNearbyUsers = async () => {
     try {
-      // First update our location
+      // Update our own live location first so the backend has fresh coords
+      // (does NOT block the user list fetch on failure — we fall through)
       await updateMyLocation();
 
       const token = await getAuthToken();
@@ -89,30 +90,26 @@ export default function SecurityNearby() {
         router.replace('/auth/login');
         return;
       }
-      
-      const response = await axios.get(`${BACKEND_URL}/api/security/nearby`, {
+
+      // FIX: was calling /security/nearby (returns panics/reports, wrong endpoint).
+      // The correct endpoint for nearby security AGENTS is /security/nearby-security.
+      const response = await axios.get(`${BACKEND_URL}/api/security/nearby-security`, {
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000
+        timeout: 15000,
       });
-      
-      setNearbyUsers(response.data.nearby_users || []);
-      setMyRadius(response.data.your_radius_km || 25);
-      // FIX: Only update myLocation from the API response if the server returns
-      // valid coordinates. If your_location is missing/null (e.g. the update
-      // hasn't propagated yet), we keep the GPS-acquired coords that
-      // updateMyLocation() already set — preventing the null→coords→null flicker
-      // that caused the location bar and map to appear and disappear.
-      if (response.data.your_location?.coordinates) {
-        setMyLocation({
-          longitude: response.data.your_location.coordinates[0],
-          latitude: response.data.your_location.coordinates[1],
-        });
-      }
+
+      // /security/nearby-security returns { agents: [{id, full_name, status, ...}] }
+      setNearbyUsers(response.data.agents || []);
+
+      // NOTE: myRadius is a per-agent setting retrieved separately from team-location.
+      // nearby-security doesn't return it, so we leave the default (25 km).
+      // myLocation is already set from GPS inside updateMyLocation() — no need to
+      // overwrite it from the API response (avoids null→value flicker on first load).
     } catch (error: any) {
       if (error?.response?.status === 401) {
         await clearAuthData();
         router.replace('/auth/login');
-      } else if (error.response?.status === 400) {
+      } else if (error?.response?.status === 400) {
         setLocationError('Please update your location first');
       } else {
         console.error('[SecurityNearby] Failed to load nearby users:', error);
@@ -193,8 +190,8 @@ export default function SecurityNearby() {
   // Prepare markers for the map
   const getMapMarkers = () => {
     const markers: any[] = [];
-    
-    // Add user's own location as red marker
+
+    // My own position (red)
     if (myLocation) {
       markers.push({
         id: 'my-location',
@@ -202,24 +199,28 @@ export default function SecurityNearby() {
         longitude: myLocation.longitude,
         title: 'You',
         description: 'Your current location',
-        pinColor: '#EF4444'
+        pinColor: '#EF4444',
       });
     }
-    
-    // Add nearby security users as blue markers
+
+    // Nearby security agents (blue)
+    // FIX: /security/nearby-security returns flat latitude/longitude fields
+    // (and a GeoJSON-style location.coordinates as backup). Accept both.
     nearbyUsers.forEach((user: any) => {
-      if (user.location?.coordinates) {
+      const lat = user.latitude ?? user.location?.coordinates?.[1];
+      const lng = user.longitude ?? user.location?.coordinates?.[0];
+      if (lat != null && lng != null) {
         markers.push({
           id: user.id,
-          latitude: user.location.coordinates[1],
-          longitude: user.location.coordinates[0],
+          latitude: lat,
+          longitude: lng,
           title: user.full_name || 'Security Agent',
           description: user.status || 'Available',
-          pinColor: '#3B82F6'
+          pinColor: '#3B82F6',
         });
       }
     });
-    
+
     return markers;
   };
 
@@ -258,10 +259,13 @@ export default function SecurityNearby() {
         <TouchableOpacity 
           style={styles.actionButton} 
           onPress={() => {
-            if (user.location?.coordinates) {
-              openInMaps(user.location.coordinates[1], user.location.coordinates[0], user.full_name || 'Security Agent');
+            // FIX: accept flat lat/lng or GeoJSON-style coordinates
+            const lat = user.latitude ?? user.location?.coordinates?.[1];
+            const lng = user.longitude ?? user.location?.coordinates?.[0];
+            if (lat != null && lng != null) {
+              openInMaps(lat, lng, user.full_name || 'Security Agent');
             } else {
-              Alert.alert('Location', 'Location not available');
+              Alert.alert('Location', 'Location not available for this agent');
             }
           }}
         >
