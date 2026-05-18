@@ -148,6 +148,18 @@ export default function CivilHome() {
       return;
     }
 
+    // FIX (session-bleed): enforce role — a security or admin user who somehow
+    // lands on /civil/home must be redirected to their own dashboard.
+    const metadata = await getUserMetadata();
+    if (metadata.role === 'security') {
+      router.replace('/security/home');
+      return;
+    }
+    if (metadata.role === 'admin') {
+      router.replace('/admin/dashboard');
+      return;
+    }
+
     // Check for active panic - sync with backend first, then fallback to local storage
     try {
       const response = await axios.get(`${BACKEND_URL}/api/panic/status`, {
