@@ -45,7 +45,7 @@ module.exports = {
     name: "Se-Q",
     slug: "se-q",
     version: "2.1.9",
-    owner: "nwababy",
+    owner: "anthony82",  // ← CHANGE THIS from "nwababy" to "anthony82"
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "safeguard",
