@@ -93,12 +93,15 @@ export default function Login() {
                 <TextInput
                   style={styles.input}
                   placeholder="Email Address"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  selectionColor="#4CAF82"
+                  underlineColorAndroid="transparent"
+                  autoComplete="email"
                 />
               </View>
             </View>
@@ -109,12 +112,15 @@ export default function Login() {
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#94A3B8"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  selectionColor="#4CAF82"
+                  underlineColorAndroid="transparent"
+                  autoComplete="current-password"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -124,7 +130,7 @@ export default function Login() {
                   <Ionicons
                     name={showPassword ? 'eye-off' : 'eye'}
                     size={22}
-                    color="#22C55E"
+                    color="#4CAF82"
                   />
                 </TouchableOpacity>
               </View>
@@ -172,7 +178,7 @@ export default function Login() {
             activeOpacity={0.7}
           >
             <View style={styles.adminIconContainer}>
-              <Text style={styles.shieldIcon}>🛡</Text>
+              <Ionicons name="shield" size={18} color="#8B5CF6" />
             </View>
             <Text style={styles.adminPortalText}>Admin Portal</Text>
           </TouchableOpacity>
@@ -227,18 +233,19 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: 'rgba(76, 175, 130, 0.4)',
     overflow: 'hidden',
   },
   input: {
     flex: 1,
-    color: '#fff',
+    color: '#1E293B',
     fontSize: 16,
     paddingHorizontal: 20,
     paddingVertical: 18,
+    backgroundColor: 'transparent',
   },
   eyeButton: {
     paddingHorizontal: 20,
@@ -249,17 +256,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#22C55E',
+    color: '#4CAF82',
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#22C55E',
+    backgroundColor: '#4CAF82',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#22C55E',
+    shadowColor: '#3D9E6A',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -298,7 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   signUpLink: {
-    color: '#22C55E',
+    color: '#4CAF82',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -314,7 +321,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -322,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   adminPortalText: {
-    color: '#22C55E',
+    color: '#8B5CF6',
     fontSize: 14,
     fontWeight: '500',
   },
