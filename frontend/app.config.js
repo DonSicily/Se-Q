@@ -1,4 +1,48 @@
-export default {
+/**
+ * app.config.js
+ *
+ * MAPBOX TOKEN SETUP:
+ *   The Mapbox Maps Android SDK reads mapbox_access_token from Android string
+ *   resources at NATIVE INIT TIME — before any JS runs. Without it the app
+ *   crashes with MapboxConfigurationException on any screen that shows a map.
+ *
+ *   Steps:
+ *     1. Get your token from https://account.mapbox.com/access-tokens/
+ *     2. Add it as an EAS secret:
+ *          eas secret create MAPBOX_ACCESS_TOKEN pk.eyJ1...your_token
+ *     3. Rebuild: eas build --platform android
+ *
+ *   The withMapboxToken plugin below injects the token into
+ *   android/app/src/main/res/values/strings.xml at build time so the
+ *   native Mapbox SDK can read it at startup.
+ */
+
+const { withStringsXml } = require('@expo/config-plugins');
+
+// Read token from EAS secret (injected as env var during eas build) or local .env
+const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
+
+/**
+ * Expo config plugin: writes mapbox_access_token into Android strings.xml.
+ * The native MapController reads this resource before any JS runs —
+ * calling Mapbox.setAccessToken() from JS alone is NOT sufficient on Android.
+ */
+const withMapboxToken = (config) => {
+  return withStringsXml(config, (mod) => {
+    const strings = mod.modResults.resources.string || [];
+    // Remove any stale entry to avoid duplicates on repeated builds
+    mod.modResults.resources.string = strings.filter(
+      (item) => item.$ && item.$.name !== 'mapbox_access_token'
+    );
+    mod.modResults.resources.string.push({
+      $: { name: 'mapbox_access_token', translatable: 'false' },
+      _: MAPBOX_TOKEN || 'PASTE_YOUR_MAPBOX_TOKEN_HERE',
+    });
+    return mod;
+  });
+};
+
+module.exports = {
   expo: {
     name: "Se-Q",
     slug: "se-q",
@@ -43,7 +87,12 @@ export default {
       eas: {
         projectId: "faa8ffeb-e120-4b0e-bef8-9ef9d3a09419"
       },
-      backendUrl: "https://se-q-production.up.railway.app"
-    }
+      backendUrl: "https://se-q-production.up.railway.app",
+      // JS layer reads this via Constants.expoConfig.extra.mapboxToken
+      mapboxToken: MAPBOX_TOKEN,
+    },
+    plugins: [
+      withMapboxToken,
+    ],
   }
 };
