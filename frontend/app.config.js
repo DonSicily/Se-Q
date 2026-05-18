@@ -22,6 +22,13 @@ const { withStringsXml } = require('@expo/config-plugins');
 // Read token from EAS secret (injected as env var during eas build) or local .env
 const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
 
+// Validate token is present (fail build early if missing)
+if (!MAPBOX_TOKEN && process.env.CI) {
+  console.error('❌ ERROR: MAPBOX_ACCESS_TOKEN environment variable is not set!');
+  console.error('   Run: eas secret create MAPBOX_ACCESS_TOKEN pk.your_token_here');
+  process.exit(1);
+}
+
 /**
  * Expo config plugin: writes mapbox_access_token into Android strings.xml.
  * The native MapController reads this resource before any JS runs —
@@ -38,6 +45,8 @@ const withMapboxToken = (config) => {
       $: { name: 'mapbox_access_token', translatable: 'false' },
       _: MAPBOX_TOKEN || 'PASTE_YOUR_MAPBOX_TOKEN_HERE',
     });
+    
+    console.log(`✅ Injected Mapbox token into strings.xml (length: ${MAPBOX_TOKEN.length})`);
     return mod;
   });
 };
@@ -85,7 +94,8 @@ module.exports = {
     },
     extra: {
       eas: {
-        projectId: "faa8ffeb-e120-4b0e-bef8-9ef9d3a09419"
+        // ✅ FIXED: Use the correct project ID from your build error
+        projectId: "374e4bfb-9d3d-4525-9d6e-7f27b51a7a79"
       },
       backendUrl: "https://se-q-production.up.railway.app",
       // JS layer reads this via Constants.expoConfig.extra.mapboxToken
