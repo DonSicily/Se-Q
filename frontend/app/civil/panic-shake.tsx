@@ -26,6 +26,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import axios from 'axios';
 import { getAuthToken, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import BACKEND_URL from '../../utils/config';
 import { beginAmbientCapture } from '../../utils/ambientRecorder';
 import { setNativePanicActive } from '../../utils/nativePanicBridge';
@@ -167,17 +168,19 @@ export default function PanicShake() {
     Vibration.vibrate([0, 400, 100, 400, 100, 400]);
 
     try {
-      await Location.requestForegroundPermissionsAsync();
-      const bgStatus = await Location.requestBackgroundPermissionsAsync();
+      // Request permissions — getLocation() will re-request foreground internally,
+      // but we also need background permission for the GPS task that runs after activation.
+      try { await Location.requestBackgroundPermissionsAsync(); } catch (_) {}
+      const bgStatus = await Location.requestBackgroundPermissionsAsync().catch(() => ({ status: 'denied' }));
 
-      let lat = 0, lng = 0;
-      try {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        lat = loc.coords.latitude;
-        lng = loc.coords.longitude;
-      } catch (_) {}
+      // FIX: Use shared getLocation() utility.
+      // Old code: let lat = 0, lng = 0; try { ... } catch (_) {}
+      //   → silently sent latitude=0, longitude=0 whenever GPS was cold or slow.
+      // New code: getLocation('panic') returns null if GPS is unavailable.
+      //   We never send 0,0. If coords are null we omit them from the payload
+      //   and the backend records the panic without a location; the background
+      //   GPS task will deliver the real fix seconds later.
+      const coords = await getLocation('panic');
 
       const token = await getAuthToken();
       if (!token) {
@@ -188,7 +191,13 @@ export default function PanicShake() {
 
       const response = await axios.post(
         `${BACKEND_URL}/api/panic/activate`,
-        { emergency_category: category, latitude: lat, longitude: lng },
+        {
+          emergency_category: category,
+          // Send null fields rather than 0,0 when GPS is unavailable
+          latitude:  coords?.latitude  ?? null,
+          longitude: coords?.longitude ?? null,
+          accuracy:  coords?.accuracy  ?? null,
+        },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
       );
 

@@ -36,6 +36,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { getAuthToken, getUserMetadata, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import BACKEND_URL from '../../utils/config';
 
 const { width: W, height: H } = Dimensions.get('window');
@@ -466,8 +467,15 @@ export default function Escort() {
       }
       try { await Location.requestBackgroundPermissionsAsync(); } catch (_) {}
 
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const token    = await getAuthToken();
+      // FIX: use getLocation('soft') — adds timeout + last-known fallback.
+      // If GPS is unavailable, block start and show an error rather than sending 0,0.
+      const startCoords = await getLocation('soft');
+      if (!startCoords) {
+        Alert.alert('Location Required', 'Unable to get your location. Please enable GPS and try again.');
+        setLoading(false);
+        return;
+      }
+      const token = await getAuthToken();
       if (!token) { router.replace('/auth/login'); return; }
       tokenRef.current = token;
 
@@ -476,9 +484,9 @@ export default function Escort() {
         {
           action: 'start',
           location: {
-            latitude:  location.coords.latitude,
-            longitude: location.coords.longitude,
-            accuracy:  location.coords.accuracy,
+            latitude:  startCoords.latitude,
+            longitude: startCoords.longitude,
+            accuracy:  startCoords.accuracy,
             timestamp: new Date().toISOString(),
           },
         },
@@ -529,18 +537,21 @@ export default function Escort() {
   // ── GPS point ─────────────────────────────────────────────────────────────
   const postGpsPoint = async (token: string) => {
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      // FIX: use getLocation('soft') — adds 12-second timeout + last-known fallback.
+      // If coords are null, skip this poll rather than sending 0,0.
+      const loc = await getLocation('soft');
+      if (!loc) return; // GPS unavailable — skip; next interval will retry
       setCurrentGps({
-        lat:       loc.coords.latitude,
-        lng:       loc.coords.longitude,
+        lat:       loc.latitude,
+        lng:       loc.longitude,
         updatedAt: new Date().toLocaleTimeString(),
       });
       await axios.post(
         `${BACKEND_URL}/api/escort/location`,
         {
-          latitude:  loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          accuracy:  loc.coords.accuracy,
+          latitude:  loc.latitude,
+          longitude: loc.longitude,
+          accuracy:  loc.accuracy,
           timestamp: new Date().toISOString(),
         },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }

@@ -23,6 +23,7 @@ import * as TaskManager from 'expo-task-manager';
 import axios from 'axios';
 import EmergencyCategoryModal from '../../components/EmergencyCategoryModal';
 import { getAuthToken, clearAuthData } from '../../utils/auth';
+import { getLocation } from '../../utils/getLocation';
 import BACKEND_URL from '../../utils/config';
 import { beginAmbientCapture } from '../../utils/ambientRecorder';
 import { setNativePanicActive } from '../../utils/nativePanicBridge';
@@ -145,16 +146,17 @@ export default function PanicActive() {
   const activatePanic = async (category: string, capture: ReturnType<typeof beginAmbientCapture>) => {
     setScreen('activating');
     try {
-      const { status: fg } = await Location.requestForegroundPermissionsAsync();
-      if (fg !== 'granted') {
-        router.back();
-        return;
-      }
+      // FIX: replaced BestForNavigation (hangs indefinitely on Android on cold GPS)
+      // with the shared getLocation('panic') utility that:
+      //   1. Uses Accuracy.High with an 8-second timeout
+      //   2. Falls back to last-known position (≤5 min)
+      //   3. Returns null rather than hanging forever or sending 0,0
       try { await Location.requestBackgroundPermissionsAsync(); } catch (_) {}
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
-      });
+      const coords = await getLocation('panic');
+      // coords may be null if GPS is completely unavailable — that is acceptable.
+      // We send null fields rather than 0,0. The background task will post the
+      // real fix once GPS warms up.
 
       const token = await getAuthToken();
       if (!token) { router.replace('/auth/login'); return; }
@@ -162,9 +164,9 @@ export default function PanicActive() {
       const res = await axios.post(
         `${BACKEND_URL}/api/panic/activate`,
         {
-          latitude:           location.coords.latitude,
-          longitude:          location.coords.longitude,
-          accuracy:           location.coords.accuracy,
+          latitude:           coords?.latitude  ?? null,
+          longitude:          coords?.longitude ?? null,
+          accuracy:           coords?.accuracy  ?? null,
           timestamp:          new Date().toISOString(),
           emergency_category: category,
         },
