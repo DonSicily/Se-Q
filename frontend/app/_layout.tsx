@@ -11,6 +11,7 @@ import { checkAndConsumePanic } from '../utils/nativePanicBridge';
 import BACKEND_URL from '../utils/config';
 import { getAuthToken } from '../utils/auth';
 import * as Location from 'expo-location';
+import { getLocation } from '../utils/getLocation';
 
 interface ShakeBannerProps { onTap: () => void; onDismiss: () => void; }
 
@@ -71,7 +72,27 @@ function AppContent() {
   }, [segments]);
   useEffect(() => { if (!initialized.current) { initialized.current = true; queueCleanup.current = startQueueProcessor(); } return () => { queueCleanup.current?.(); queueCleanup.current = null; }; }, []);
   const sendPingLocation = useCallback(async () => {
-    try { const token = await getAuthToken(); if (!token) return; const { status } = await Location.requestForegroundPermissionsAsync(); if (status !== 'granted') return; const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }); await fetch(`${BACKEND_URL}/api/location/ping-update`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: location.coords.latitude, longitude: location.coords.longitude, accuracy: location.coords.accuracy ?? null }) }); console.log('[Ping] Location transmitted to security'); } catch (err) { console.error('[Ping] Location transmission failed:', err); }
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      // FIX: use shared getLocation() — adds 8-second timeout + last-known fallback.
+      // Old code called getCurrentPositionAsync with no timeout, which could hang
+      // and block the notification handler thread.
+      const coords = await getLocation('soft');
+      if (!coords) return; // GPS unavailable — skip this ping silently
+      await fetch(`${BACKEND_URL}/api/location/ping-update`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude:  coords.latitude,
+          longitude: coords.longitude,
+          accuracy:  coords.accuracy,
+        }),
+      });
+      console.log('[Ping] Location transmitted to security');
+    } catch (err) {
+      console.error('[Ping] Location transmission failed:', err);
+    }
   }, []);
   useEffect(() => {
     Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false }) });
