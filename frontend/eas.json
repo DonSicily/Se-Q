@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw"
       }
     },
     "preview": {
@@ -19,7 +19,7 @@
       },
       "distribution": "internal",
       "env": {
-        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw"
       }
     },
     "development": {
@@ -27,7 +27,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "MAPBOX_ACCESS_TOKEN": "pk.your_public_token_here"
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw"
       }
     }
   },
