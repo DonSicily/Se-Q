@@ -615,41 +615,6 @@ export default function SecurityHome() {
           </View>
         </View>
 
-        {/* ── Response Time Score Card ─────────────────────────────────── */}
-        {responseStats && (
-          <View style={styles.statsCard}>
-            <View style={styles.statsHeader}>
-              <Ionicons name="timer-outline" size={18} color="#3B82F6" />
-              <Text style={styles.statsTitle}>Response Time Score</Text>
-              <Text style={styles.statsPeriod}>Last 90 days</Text>
-            </View>
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>
-                  {responseStats.my_avg_seconds == null
-                    ? '—'
-                    : responseStats.my_avg_seconds < 60
-                      ? `${responseStats.my_avg_seconds}s`
-                      : `${Math.round(responseStats.my_avg_seconds / 60)} min`}
-                </Text>
-                <Text style={styles.statLabel}>My Avg</Text>
-                <Text style={styles.statSub}>{responseStats.my_response_count} response{responseStats.my_response_count !== 1 ? 's' : ''}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBox}>
-                <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-                  {responseStats.team_avg_seconds == null
-                    ? '—'
-                    : responseStats.team_avg_seconds < 60
-                      ? `${responseStats.team_avg_seconds}s`
-                      : `${Math.round(responseStats.team_avg_seconds / 60)} min`}
-                </Text>
-                <Text style={styles.statLabel}>Team Avg</Text>
-                <Text style={styles.statSub}>{responseStats.team_response_count} total</Text>
-              </View>
-            </View>
-          </View>
-        )}
 
         {/* ── All Nearby Panics (responded + unresponded) ─────────────────── */}
         <View style={styles.section}>
@@ -737,6 +702,41 @@ export default function SecurityHome() {
             ))
           )}
         </View>
+        {/* ── Response Time Score Card ── sits at the bottom per UX requirement ── */}
+        {responseStats && (
+          <View style={[styles.statsCard, { marginBottom: 8 }]}>
+            <View style={styles.statsHeader}>
+              <Ionicons name="timer-outline" size={18} color="#3B82F6" />
+              <Text style={styles.statsTitle}>Response Time Score</Text>
+              <Text style={styles.statsPeriod}>Last 90 days</Text>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>
+                  {responseStats.my_avg_seconds == null
+                    ? '—'
+                    : responseStats.my_avg_seconds < 60
+                      ? `${responseStats.my_avg_seconds}s`
+                      : `${Math.round(responseStats.my_avg_seconds / 60)} min`}
+                </Text>
+                <Text style={styles.statLabel}>My Avg</Text>
+                <Text style={styles.statSub}>{responseStats.my_response_count} response{responseStats.my_response_count !== 1 ? 's' : ''}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                  {responseStats.team_avg_seconds == null
+                    ? '—'
+                    : responseStats.team_avg_seconds < 60
+                      ? `${responseStats.team_avg_seconds}s`
+                      : `${Math.round(responseStats.team_avg_seconds / 60)} min`}
+                </Text>
+                <Text style={styles.statLabel}>Team Avg</Text>
+                <Text style={styles.statSub}>{responseStats.team_response_count} total</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
