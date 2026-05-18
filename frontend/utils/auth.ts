@@ -1,10 +1,20 @@
 /**
  * Authentication Utility Module
  * Centralized authentication handling for SafeGuard app
+ *
+ * FIX (session-bleed / Access Denied / admin login):
+ *   expo-secure-store does NOT have multiSet / multiGet / multiRemove.
+ *   All calls to those methods threw exceptions that were silently swallowed,
+ *   meaning role, userId, email were never reliably written or read.
+ *   This caused:
+ *     • getUserMetadata() always returning null role → "Access Denied" on admin dashboard
+ *     • saveAuthData() silently skipping the per-user key writes → stale keys from the
+ *       previous session surviving logout → Security dashboard data bleeding into Civil
+ *   Fix: route every key through the asyncStorageShim which correctly implements
+ *   multi* operations on top of SecureStore.getItemAsync / setItemAsync / deleteItemAsync.
  */
 
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import AsyncStorage from './asyncStorageShim';
 import { Audio } from 'expo-av';
 
 const AUTH_TOKEN_KEY  = 'auth_token';
@@ -21,29 +31,13 @@ const SESSION_STATE_KEYS = [
   'active_escort',
 ];
 
-const isSecureStoreAvailable = async (): Promise<boolean> => {
-  if (Platform.OS === 'web') return false;
-  try {
-    await SecureStore.getItemAsync('__test__');
-    return true;
-  } catch {
-    return false;
-  }
-};
+// ── Token ─────────────────────────────────────────────────────────────────────
 
 export const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS !== 'web') {
-      try {
-        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-        if (token) return token;
-      } catch (_) {}
-    }
-    return await SecureStore.getItem(AUTH_TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return AsyncStorage.getItem(AUTH_TOKEN_KEY);
 };
+
+// ── Save ──────────────────────────────────────────────────────────────────────
 
 export const saveAuthData = async (data: {
   token: string;
@@ -53,47 +47,13 @@ export const saveAuthData = async (data: {
   is_premium?: boolean;
 }): Promise<boolean> => {
   try {
-    // Save auth token first
-    if (Platform.OS !== 'web') {
-      try {
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
-      } catch (_) {
-        await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
-      }
-    } else {
-      await SecureStore.setItem(AUTH_TOKEN_KEY, data.token);
-    }
-
-    // Save other user data
-    try {
-      await SecureStore.multiSet([
-        [USER_ID_KEY,    data.user_id],
-        [USER_ROLE_KEY,  data.role],
-        [IS_PREMIUM_KEY, String(data.is_premium || false)],
-        [USER_EMAIL_KEY, data.email || ''],
-      ]);
-    } catch (_) {
-      // Fallback: save individually
-      if (Platform.OS !== 'web') {
-        try {
-          await SecureStore.setItemAsync(USER_ID_KEY, data.user_id);
-          await SecureStore.setItemAsync(USER_ROLE_KEY, data.role);
-          await SecureStore.setItemAsync(IS_PREMIUM_KEY, String(data.is_premium || false));
-          await SecureStore.setItemAsync(USER_EMAIL_KEY, data.email || '');
-        } catch (_2) {
-          await SecureStore.setItem(USER_ID_KEY, data.user_id);
-          await SecureStore.setItem(USER_ROLE_KEY, data.role);
-          await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
-          await SecureStore.setItem(USER_EMAIL_KEY, data.email || '');
-        }
-      } else {
-        await SecureStore.setItem(USER_ID_KEY, data.user_id);
-        await SecureStore.setItem(USER_ROLE_KEY, data.role);
-        await SecureStore.setItem(IS_PREMIUM_KEY, String(data.is_premium || false));
-        await SecureStore.setItem(USER_EMAIL_KEY, data.email || '');
-      }
-    }
-
+    await AsyncStorage.multiSet([
+      [AUTH_TOKEN_KEY,  data.token],
+      [USER_ID_KEY,     data.user_id],
+      [USER_ROLE_KEY,   data.role],
+      [IS_PREMIUM_KEY,  String(data.is_premium || false)],
+      [USER_EMAIL_KEY,  data.email || ''],
+    ]);
     return true;
   } catch (error) {
     console.error('[Auth] Failed to save auth data:', error);
@@ -101,23 +61,21 @@ export const saveAuthData = async (data: {
   }
 };
 
+// ── Clear (logout) ────────────────────────────────────────────────────────────
+
 /**
  * Clear ALL authentication data (logout).
  *
  * 1. Stops any active escort session on the backend (best-effort).
- *    This ensures the session is marked inactive in MongoDB so it
- *    is NOT restored when the same user logs back in — the user
- *    intentionally logged out, so the escort should not resume.
  * 2. Unregisters push token.
- * 3. Clears JWT from SecureStore + SecureStore.
- * 4. Clears all session-state keys.
+ * 3. Clears JWT + user keys from SecureStore via the shim.
+ * 4. Clears all session-state keys so no data bleeds to the next session.
  */
 export const clearAuthData = async (): Promise<boolean> => {
   try {
     const token = await getAuthToken();
 
-    // CRITICAL: Reset audio session to clean state BEFORE clearing auth
-    // This prevents audio mode persistence that causes sound clashes on re-login
+    // Reset audio session BEFORE clearing auth
     try {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
@@ -135,7 +93,6 @@ export const clearAuthData = async (): Promise<boolean> => {
       const { default: axios }       = await import('axios');
       const { default: BACKEND_URL } = await import('./config');
 
-      // Stop active escort session so it is not incorrectly restored on re-login
       try {
         await axios.post(
           `${BACKEND_URL}/api/escort/action`,
@@ -144,7 +101,6 @@ export const clearAuthData = async (): Promise<boolean> => {
         );
       } catch (_) {}
 
-      // Unregister push token
       try {
         await axios.delete(`${BACKEND_URL}/api/push-token/unregister`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -153,11 +109,8 @@ export const clearAuthData = async (): Promise<boolean> => {
       } catch (_) {}
     }
 
-    if (Platform.OS !== 'web') {
-      try { await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY); } catch (_) {}
-    }
-
-    await SecureStore.multiRemove([
+    // Clear every auth + session key so nothing bleeds into the next session
+    await AsyncStorage.multiRemove([
       AUTH_TOKEN_KEY,
       USER_ID_KEY,
       USER_ROLE_KEY,
@@ -172,6 +125,8 @@ export const clearAuthData = async (): Promise<boolean> => {
   }
 };
 
+// ── Read metadata ─────────────────────────────────────────────────────────────
+
 export const getUserMetadata = async (): Promise<{
   userId: string | null;
   role: string | null;
@@ -179,13 +134,15 @@ export const getUserMetadata = async (): Promise<{
   isPremium: boolean;
 }> => {
   try {
-    const results = await SecureStore.multiGet([USER_ID_KEY, USER_ROLE_KEY, IS_PREMIUM_KEY, USER_EMAIL_KEY]);
-    const data: { [key: string]: string | null } = {};
+    const results = await AsyncStorage.multiGet([
+      USER_ID_KEY, USER_ROLE_KEY, IS_PREMIUM_KEY, USER_EMAIL_KEY,
+    ]);
+    const data: Record<string, string | null> = {};
     results.forEach(([key, value]) => { data[key] = value; });
     return {
-      userId:    data[USER_ID_KEY],
-      role:      data[USER_ROLE_KEY],
-      email:     data[USER_EMAIL_KEY] || null,
+      userId:    data[USER_ID_KEY]    ?? null,
+      role:      data[USER_ROLE_KEY]  ?? null,
+      email:     data[USER_EMAIL_KEY] ?? null,
       isPremium: data[IS_PREMIUM_KEY] === 'true',
     };
   } catch {
@@ -193,12 +150,14 @@ export const getUserMetadata = async (): Promise<{
   }
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 export const isAuthenticated = async (): Promise<boolean> => {
   const token = await getAuthToken();
   return !!token;
 };
 
-export const getAuthHeader = async (): Promise<{ Authorization: string } | {}> => {
+export const getAuthHeader = async (): Promise<{ Authorization: string } | Record<string, never>> => {
   const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
