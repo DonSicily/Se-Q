@@ -4,7 +4,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppState, AppStateStatus, View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
-import { Audio } from 'expo-av';
 import { startQueueProcessor } from '../utils/offlineQueue';
 import { useShakeDetector } from '../utils/shakeDetector';
 import { checkAndConsumePanic } from '../utils/nativePanicBridge';
@@ -12,6 +11,11 @@ import BACKEND_URL from '../utils/config';
 import { getAuthToken } from '../utils/auth';
 import * as Location from 'expo-location';
 import { getLocation } from '../utils/getLocation';
+// FIX BUG-05: import AudioManager instead of raw Audio so the layout reset
+// goes through the coordinated standby path rather than calling
+// setAudioModeAsync with raw integer 0 (which resolves to MixWithOthers on
+// iOS and an invalid mode on Android).
+import { AudioManager } from '../utils/AudioManager';
 
 interface ShakeBannerProps { onTap: () => void; onDismiss: () => void; }
 
@@ -75,11 +79,8 @@ function AppContent() {
     try {
       const token = await getAuthToken();
       if (!token) return;
-      // FIX: use shared getLocation() — adds 8-second timeout + last-known fallback.
-      // Old code called getCurrentPositionAsync with no timeout, which could hang
-      // and block the notification handler thread.
       const coords = await getLocation('soft');
-      if (!coords) return; // GPS unavailable — skip this ping silently
+      if (!coords) return;
       await fetch(`${BACKEND_URL}/api/location/ping-update`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -104,10 +105,34 @@ function AppContent() {
 
 export default function RootLayout() {
   useEffect(() => {
-    const resetAudioSession = async () => {
-      try { await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: false, staysActiveInBackground: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false, interruptionModeIOS: 0, interruptionModeAndroid: 0 }); console.log('[RootLayout] Audio session reset to clean state'); } catch (err) { console.warn('[RootLayout] Audio session reset failed:', err); }
+    // FIX BUG-05: Previously called Audio.setAudioModeAsync() directly with
+    // interruptionModeIOS: 0  → resolves to MixWithOthers (wrong intent)
+    // interruptionModeAndroid: 0 → invalid value, throws on some OEMs
+    //
+    // Now delegates to AudioManager.initialize() which:
+    //   1. Uses STANDBY_MODE with proper InterruptionModeIOS.DoNotMix /
+    //      InterruptionModeAndroid.DoNotMix enum values (never raw integers).
+    //   2. Is idempotent — safe to call multiple times.
+    //   3. Guards the reset: if an alarm or recording is already active
+    //      (e.g. layout re-mounts during a deep navigation stack change),
+    //      AudioManager will not overwrite the active session mode.
+    //
+    // Note: AudioManager.initialize() sets the standby/neutral mode only if
+    // no sound is currently active. This prevents the layout mount from
+    // clobbering an in-flight alarm or ambient capture.
+    const initAudio = async () => {
+      try {
+        // Only reset to standby if nothing is currently playing/recording.
+        // isActive() returns false on true cold-start (the normal case).
+        if (!AudioManager.isActive()) {
+          await AudioManager.initialize();
+          console.log('[RootLayout] AudioManager initialized to standby state');
+        }
+      } catch (err) {
+        console.warn('[RootLayout] AudioManager initialization failed:', err);
+      }
     };
-    resetAudioSession();
+    initAudio();
   }, []);
   return (<SafeAreaProvider><View style={{ flex: 1, backgroundColor: '#0F172A' }}><AppContent /></View></SafeAreaProvider>);
 }
