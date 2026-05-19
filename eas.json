@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 7.0.0"
+  },
+  "build": {
+    "production": {
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw",
+        "MAPBOX_DOWNLOADS_TOKEN": "sk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDZmeDMyNDB0MHMycXF6dnAzcXJpaDMifQ.3SZtCuy7_8auead3K9CWtg"
+      },
+      "workingDirectory": "frontend"
+    },
+    "preview": {
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "env": {
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw",
+        "MAPBOX_DOWNLOADS_TOKEN": "sk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDZmeDMyNDB0MHMycXF6dnAzcXJpaDMifQ.3SZtCuy7_8auead3K9CWtg"
+      },
+      "workingDirectory": "frontend"
+    },
+    "development": {
+      "node": "20.19.4",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw",
+        "MAPBOX_DOWNLOADS_TOKEN": "sk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDZmeDMyNDB0MHMycXF6dnAzcXJpaDMifQ.3SZtCuy7_8auead3K9CWtg"
+      },
+      "workingDirectory": "frontend"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
