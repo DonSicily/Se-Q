@@ -14,6 +14,7 @@ const { width } = Dimensions.get('window');
 
 export default function SecurityNearby() {
   const router = useRouter();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [nearbyUsers, setNearbyUsers] = useState<any[]>([]);
   const [myLocation, setMyLocation] = useState<any>(null);
   const [myRadius, setMyRadius] = useState(25);
@@ -27,6 +28,18 @@ export default function SecurityNearby() {
   };
 
   useEffect(() => {
+    // Fetch current user ID to exclude self from nearby list
+    (async () => {
+      try {
+        const token = await getAuthToken();
+        if (token) {
+          const res = await axios.get(`${BACKEND_URL}/api/user/profile`, {
+            headers: { Authorization: `Bearer ${token}` }, timeout: 8000,
+          });
+          setCurrentUserId(res.data?.user_id || res.data?.id || res.data?._id || null);
+        }
+      } catch (_) {}
+    })();
     loadNearbyUsers();
   }, []);
 
@@ -193,7 +206,12 @@ export default function SecurityNearby() {
     // Nearby security agents (blue)
     // FIX: /security/nearby-security returns flat latitude/longitude fields
     // (and a GeoJSON-style location.coordinates as backup). Accept both.
+    // FIX: Also exclude the current user from the nearby list - a security
+    // officer should not see themselves in the "Nearby Security" list.
     nearbyUsers.forEach((user: any) => {
+      // Skip if this is the current user (self should not appear as "nearby")
+      if (user.id === currentUserId) return;
+
       const lat = user.latitude ?? user.location?.coordinates?.[1];
       const lng = user.longitude ?? user.location?.coordinates?.[0];
       if (lat != null && lng != null) {
