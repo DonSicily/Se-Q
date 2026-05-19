@@ -45,7 +45,7 @@ module.exports = {
     name: "Se-Q",
     slug: "se-q",
     version: "2.1.9",
-    owner: "anthony82",  // ← CHANGE THIS from "nwababy" to "anthony82"
+    owner: "anthony82",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "safeguard",
@@ -89,5 +89,6 @@ module.exports = {
       mapboxToken: MAPBOX_TOKEN,
     },
     plugins: [withMapboxToken],
+    workingDirectory: "frontend"   // ← THIS IS THE ONLY ADDITION
   }
 };
