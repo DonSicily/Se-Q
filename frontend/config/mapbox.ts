@@ -1,21 +1,23 @@
 /**
  * Mapbox Configuration
  *
- * TOKEN SETUP (EAS Secrets - Recommended for Production):
- *
- * Run this command to add your secret:
+ * TOKEN SETUP:
+ * For production, set your token via EAS secrets:
  *    eas secret create MAPBOX_ACCESS_TOKEN=pk.your_token_here
  *
- * The token will be injected via app.config.js extra.mapboxToken
- * which reads from EAS secrets.
+ * For development, you can set the environment variable or use the default below.
  *
  * Token source priority (highest to lowest):
  *   1. EAS Secret: MAPBOX_ACCESS_TOKEN
  *   2. app.config.js: extra.mapboxToken
  *   3. Environment variable: process.env.MAPBOX_ACCESS_TOKEN
+ *   4. Direct assignment below (for development only)
  */
 
 import Constants from 'expo-constants';
+
+// User's Mapbox token (applied directly as provided)
+const DEFAULT_MAPBOX_TOKEN = 'pk.eyJ1IjoiZG9uc2ljaWx5IiwiYSI6ImNtcDVycW9mNDBraHQyc3F6NjM1MWZ6ejYifQ.QK0P7w2CFkNWKS3sO85cAw';
 
 // Get Mapbox token from multiple sources
 const getMapboxToken = (): string => {
@@ -31,10 +33,8 @@ const getMapboxToken = (): string => {
     return envToken;
   }
 
-  // 3. No token found
-  console.warn('[Mapbox] No access token found! Map will not display.');
-  console.warn('[Mapbox] Run: eas secret create MAPBOX_ACCESS_TOKEN=pk.your_token_here');
-  return '';
+  // 3. Use user's provided token
+  return DEFAULT_MAPBOX_TOKEN;
 };
 
 export const MAPBOX_TOKEN: string = getMapboxToken();
