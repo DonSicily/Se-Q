@@ -16,26 +16,32 @@
  *     without having previously opened the audio report screen.
  *   - Uses a custom 16kHz mono preset — LOW_QUALITY on Android uses 8kHz
  *     which is barely intelligible. 16kHz is phone-call quality at ~300KB/30s.
- *   - Restores audio mode after recording so subsequent audio playback works.
- *     Uses centralized AudioManager for consistent behavior across all sound
- *     sources, preventing audio session clashes between ambient recording,
- *     panic alarms, message alerts, and report playback.
- *   - Timeout safety: if recording hangs, a 35-second hard timeout resolves
- *     the promise with null so the upload step is not blocked forever.
+ *
+ * FIX BUG-08: Audio mode is now managed exclusively through AudioManager
+ * focus system using a named tag ('ambient_recorder'). The previous pattern
+ * called setRecordingAudioMode() / restorePlaybackAudioMode() as raw
+ * setAudioModeAsync() wrappers, which raced with the message-alert poller
+ * (15-second interval in civil/home.tsx) and could set allowsRecordingIOS:
+ * false while recording was in progress, silently killing the capture on iOS.
+ *
+ * Now:
+ *   - requestFocus(RECORDING, 'ambient_recorder') acquires the session with
+ *     the highest priority — the message-alert poller will be denied focus
+ *     (ALERT=75 < RECORDING=100) and will not touch the session.
+ *   - releaseFocus('ambient_recorder') restores the session atomically through
+ *     the manager's standby path, so the restore is coordinated rather than
+ *     racing with any other caller.
  */
 
 import { Audio } from 'expo-av';
 import axios from 'axios';
 import BACKEND_URL from './config';
-import { setRecordingAudioMode, restorePlaybackAudioMode } from './AudioManager';
+import { AudioManager, AudioPriority } from './AudioManager';
 
-// FIX: was 15 s — security/panics.tsx labels the clip as "30s" to officers.
-// Align the actual capture duration with the UI label.
-const CAPTURE_DURATION_MS = 30_000;   // 30 seconds exactly
-const HARD_TIMEOUT_MS     = 35_000;   // safety net — resolves null if recording hangs
+const CAPTURE_DURATION_MS = 30_000;
+const HARD_TIMEOUT_MS     = 35_000;
 
-// 16kHz mono — phone-call quality, ~150KB for 15 seconds
-// Significantly better than LOW_QUALITY (8kHz) without the size of HIGH_QUALITY
+// 16kHz mono — phone-call quality, ~300KB for 30 seconds
 const AMBIENT_RECORDING_OPTIONS: Audio.RecordingOptions = {
   android: {
     extension: '.m4a',
@@ -43,7 +49,7 @@ const AMBIENT_RECORDING_OPTIONS: Audio.RecordingOptions = {
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
     sampleRate: 16000,
     numberOfChannels: 1,
-    bitRate: 32000,    // 32 kbps — intelligible speech, ~300KB for 30 seconds
+    bitRate: 32000,
   },
   ios: {
     extension: '.m4a',
@@ -52,10 +58,13 @@ const AMBIENT_RECORDING_OPTIONS: Audio.RecordingOptions = {
     sampleRate: 16000,
     numberOfChannels: 1,
     bitRate: 32000,
-    // linearPCM fields omitted — they only apply to PCM format, not AAC
   },
   web: {},
 };
+
+// Stable tag used for both requestFocus and releaseFocus so the manager can
+// match them correctly.
+const RECORDER_TAG = 'ambient_recorder';
 
 export interface AmbientCapture {
   attachToPanic: (panicId: string, authToken: string) => void;
@@ -76,22 +85,28 @@ export function beginAmbientCapture(): AmbientCapture {
 
 // ── Internal ──────────────────────────────────────────────────────────────────
 
-// FIX: Uses centralized AudioManager helper for consistent behavior.
-// Neutral audio mode restored after recording ends - allowsRecordingIOS: false
-// releases the mic so the OS hands the audio session back to playback callers.
 async function _record(): Promise<string | null> {
   let recording: Audio.Recording | null = null;
 
   try {
-    // ── Permission: request if not already granted ──────────────────────────
+    // ── Permission ──────────────────────────────────────────────────────────
     const { status } = await Audio.requestPermissionsAsync();
     if (status !== 'granted') {
       console.log('[AmbientRecorder] Mic permission not granted — skipping capture');
       return null;
     }
 
-    // ── Audio mode — use centralized management ──────────────────────────
-    await setRecordingAudioMode();
+    // FIX BUG-08: requestFocus(RECORDING) sets allowsRecordingIOS:true and
+    // staysActiveInBackground:true with the highest priority (100). Any
+    // concurrent caller at ALERT (75) or lower will be denied focus and
+    // cannot change the session mode while recording is in progress.
+    const focusGranted = await AudioManager.requestFocus(AudioPriority.RECORDING, RECORDER_TAG);
+    if (!focusGranted) {
+      // Another RECORDING-priority operation is already running — skip capture
+      // rather than fighting over the microphone.
+      console.log('[AmbientRecorder] Focus denied — another recording is active');
+      return null;
+    }
 
     // ── Start recording ─────────────────────────────────────────────────────
     const { recording: rec } = await Audio.Recording.createAsync(
@@ -101,7 +116,7 @@ async function _record(): Promise<string | null> {
     );
     recording = rec;
 
-    // ── Wait 30 seconds with hard timeout safety net ────────────────────────
+    // ── Wait 30 s with hard timeout safety net ───────────────────────────────
     await Promise.race([
       new Promise<void>(resolve => setTimeout(resolve, CAPTURE_DURATION_MS)),
       new Promise<void>(resolve => setTimeout(resolve, HARD_TIMEOUT_MS)),
@@ -112,21 +127,21 @@ async function _record(): Promise<string | null> {
     const uri = recording.getURI() ?? null;
     recording = null;
 
-    // ── Restore audio mode — ALWAYS awaited so playback is never blocked ────
-    // Uses centralized AudioManager helper for consistent behavior.
-    await restorePlaybackAudioMode();
+    // FIX BUG-08: releaseFocus restores the session through the manager's
+    // coordinated standby path — no bare setAudioModeAsync() call that could
+    // race with a message-alert restore happening concurrently.
+    await AudioManager.releaseFocus(RECORDER_TAG);
 
     return uri;
 
   } catch (_) {
-    // Clean up recording if it was started
     if (recording) {
       try { await recording.stopAndUnloadAsync(); } catch (__) {}
       recording = null;
     }
-    // ALWAYS restore audio mode — even on error — so subsequent playback works
-    // Uses centralized AudioManager helper for consistent behavior.
-    await restorePlaybackAudioMode();
+    // Always release focus on error so the session is never left stuck in
+    // RECORDING mode (which would deny focus to all subsequent callers).
+    await AudioManager.releaseFocus(RECORDER_TAG);
     return null;
   }
 }
