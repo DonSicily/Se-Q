@@ -88,7 +88,6 @@ module.exports = {
       backendUrl: "https://se-q-production.up.railway.app",
       mapboxToken: MAPBOX_TOKEN,
     },
-    plugins: [withMapboxToken],
-    workingDirectory: "frontend"   // ← THIS IS THE ONLY ADDITION
+    plugins: [withMapboxToken]
   }
 };
