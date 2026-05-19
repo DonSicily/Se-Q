@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Linking } from 'react-native';
+
+// Timeout for map loading (ms)
+const MAP_TIMEOUT = 8000;
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
 // FIX (Mapbox crash): @rnmapbox/maps throws a native ExceptionInInitializerError
@@ -104,9 +108,17 @@ function MapboxMap({ region, markerCoords, markers, radiusKm, onPress, style }: 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('satellite');
   const mapRef = useRef<any>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const lat = markerCoords?.latitude ?? region.latitude;
   const lng = markerCoords?.longitude ?? region.longitude;
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const allMarkers = markers
     ? markers
@@ -135,8 +147,40 @@ function MapboxMap({ region, markerCoords, markers, radiusKm, onPress, style }: 
     if (onPress) onPress({ latitude, longitude });
   };
 
+  const handleMapLoad = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setMapLoaded(true);
+  };
+
+  const handleMapError = () => {
+    console.warn('[NativeMap] Map style load failed');
+    // Don't fall back - keep trying with Mapbox
+  };
+
+  const openExternalMaps = () => {
+    const label = allMarkers[0]?.title || 'Location';
+    const url = Platform.OS === 'ios'
+      ? `maps:?q=${encodeURIComponent(label)}&ll=${lat},${lng}`
+      : `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(label)})`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`);
+    });
+  };
+
+  // Start timeout timer when component mounts
+  useEffect(() => {
+    setMapLoaded(false);
+
+    // Set timeout to ensure we eventually show content
+    timeoutRef.current = setTimeout(() => {
+      console.log('[NativeMap] Map timeout - showing Mapbox');
+      setMapLoaded(true);
+    }, MAP_TIMEOUT);
+  }, [region.latitude, region.longitude]);
+
   return (
     <View style={[styles.container, style]}>
+      {/* Loading overlay */}
       {!mapLoaded && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#3B82F6" />
@@ -146,76 +190,76 @@ function MapboxMap({ region, markerCoords, markers, radiusKm, onPress, style }: 
         </View>
       )}
 
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        styleURL={getStyleUrl()}
-        surfaceView={true}
-        onStyleLoad={() => setMapLoaded(true)}
-        onPress={handleMapPress}
-        rotateEnabled={true}
-        pitchEnabled={true}
-        logoEnabled={false}
-        attributionEnabled={false}
-      >
-        <Camera
-          defaultSettings={{ centerCoordinate: [lng, lat], zoomLevel: 14, pitch: 0, bearing: 0 }}
-        />
+      {/* Mapbox Map */}
+      {mapLoaded && (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          styleURL={getStyleUrl()}
+          surfaceView={true}
+          onStyleLoad={handleMapLoad}
+          onError={handleMapError}
+          onPress={handleMapPress}
+          rotateEnabled={true}
+          pitchEnabled={true}
+          logoEnabled={false}
+          attributionEnabled={false}
+        >
+          <Camera
+            defaultSettings={{ centerCoordinate: [lng, lat], zoomLevel: 14, pitch: 0, bearing: 0 }}
+          />
 
-        {circleFeature && (
-          <ShapeSource id="radius" shape={circleFeature}>
-            <CircleLayer
-              id="radius-circle"
-              style={{
-                circleRadius: radiusMeters / 10,
-                circleColor: '#3B82F6',
-                circleOpacity: 0.2,
-                circleStrokeWidth: 2,
-                circleStrokeColor: '#3B82F6',
+          {circleFeature && (
+            <ShapeSource id="radius" shape={circleFeature}>
+              <CircleLayer
+                id="radius-circle"
+                style={{
+                  circleRadius: radiusMeters / 10,
+                  circleColor: '#3B82F6',
+                  circleOpacity: 0.2,
+                  circleStrokeWidth: 2,
+                  circleStrokeColor: '#3B82F6',
+                }}
+              />
+            </ShapeSource>
+          )}
+
+          {allMarkers.map((marker) => (
+            <MarkerView
+              key={marker.id}
+              coordinate={[marker.longitude, marker.latitude]}
+              draggable
+              onDrag={(e: any) => {
+                const coords = e.geometry.coordinates;
+                handleMarkerDrag(marker, coords[0], coords[1]);
               }}
-            />
-          </ShapeSource>
-        )}
+            >
+              <View style={[styles.markerContainer, marker.pinColor ? { backgroundColor: marker.pinColor } : null]}>
+                {marker.pinColor === '#22C55E' ? (
+                  <Ionicons name="checkmark-circle" size={28} color="white" />
+                ) : marker.pinColor === '#EF4444' ? (
+                  <Ionicons name="location" size={28} color="white" />
+                ) : (
+                  <Ionicons name="pin" size={28} color="white" />
+                )}
+                {marker.title && (
+                  <View style={styles.markerLabel}>
+                    <Text style={styles.markerLabelText} numberOfLines={1}>{marker.title}</Text>
+                  </View>
+                )}
+              </View>
+            </MarkerView>
+          ))}
+        </MapView>
+      )}
 
-        {allMarkers.map((marker) => (
-          <MarkerView
-            key={marker.id}
-            coordinate={[marker.longitude, marker.latitude]}
-            draggable
-            onDrag={(e: any) => {
-              const coords = e.geometry.coordinates;
-              handleMarkerDrag(marker, coords[0], coords[1]);
-            }}
-          >
-            <View style={[styles.markerContainer, marker.pinColor ? { backgroundColor: marker.pinColor } : null]}>
-              {marker.pinColor === '#22C55E' ? (
-                <Ionicons name="checkmark-circle" size={28} color="white" />
-              ) : marker.pinColor === '#EF4444' ? (
-                <Ionicons name="location" size={28} color="white" />
-              ) : (
-                <Ionicons name="pin" size={28} color="white" />
-              )}
-              {marker.title && (
-                <View style={styles.markerLabel}>
-                  <Text style={styles.markerLabelText} numberOfLines={1}>{marker.title}</Text>
-                </View>
-              )}
-            </View>
-          </MarkerView>
-        ))}
-      </MapView>
-
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity style={styles.controlButton} onPress={toggleMapStyle}>
-          <Ionicons name={mapStyle === 'satellite' ? 'satellite' : 'map'} size={16} color="#3B82F6" />
-          <Text style={styles.controlText}>{mapStyle === 'satellite' ? 'Satellite' : 'Streets'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {!MAPBOX_TOKEN && mapLoaded && (
-        <View style={styles.warningBanner}>
-          <Ionicons name="warning" size={16} color="#F59E0B" />
-          <Text style={styles.warningText}>Add Mapbox token in config/mapbox.ts</Text>
+      {/* Map style toggle control */}
+      {mapLoaded && (
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity style={styles.controlButton} onPress={toggleMapStyle}>
+            <Ionicons name={mapStyle === 'satellite' ? 'satellite' : 'map'} size={16} color="#3B82F6" />
+            <Text style={styles.controlText}>{mapStyle === 'satellite' ? 'Satellite' : 'Streets'}</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -281,6 +325,4 @@ const styles = StyleSheet.create({
   controlsContainer: { position: 'absolute', top: 10, right: 10, zIndex: 1 },
   controlButton:   { backgroundColor: 'rgba(15, 23, 42, 0.9)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#3B82F6', flexDirection: 'row', alignItems: 'center', gap: 6 },
   controlText:     { color: '#3B82F6', fontSize: 12, fontWeight: '600' },
-  warningBanner:   { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: 'rgba(245, 158, 11, 0.2)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  warningText:     { color: '#F59E0B', fontSize: 12 },
 });
