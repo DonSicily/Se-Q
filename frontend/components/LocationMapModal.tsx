@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
+import { NativeMap } from './NativeMap';
+
+// Timeout for map loading (ms)
+const MAP_TIMEOUT = 8000;
 
 interface LocationMapModalProps {
   visible: boolean;
@@ -14,29 +17,46 @@ interface LocationMapModalProps {
 
 export function LocationMapModal({ visible, onClose, latitude, longitude, title, subtitle }: LocationMapModalProps) {
   const [mapLoading, setMapLoading] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  const osmHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <style>* { margin:0;padding:0; } html,body,#map { width:100vw;height:100vh;background:#0F172A; }</style>
-</head>
-<body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    var map = L.map('map',{zoomControl:true}).setView([${latitude},${longitude}],15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    var icon=L.divIcon({
-      html:'<div style="background:#EF4444;width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>',
-      className:'',iconSize:[22,22],iconAnchor:[11,11]
-    });
-    L.marker([${latitude},${longitude}],{icon:icon}).addTo(map)
-      .bindPopup('${(title || 'Location').replace(/'/g, "\\'")}').openPopup();
-  </script>
-</body>
-</html>`;
+  // Track mounted state to prevent state updates on unmounted component
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  // Clear timeout on visibility change and set new timeout when visible
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!visible) {
+      setMapLoading(true);
+      return;
+    }
+
+    // Start timeout timer - force map to show after timeout
+    timeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        console.log('[LocationMapModal] Map timeout reached, showing map');
+        setMapLoading(false);
+      }
+    }, MAP_TIMEOUT);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [visible]);
+
+  const handleMapLoaded = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (isMountedRef.current) {
+      setMapLoading(false);
+    }
+  };
 
   const openExternalMaps = () => {
     const url = Platform.OS === 'ios'
@@ -46,6 +66,55 @@ export function LocationMapModal({ visible, onClose, latitude, longitude, title,
       Linking.openURL(`https://www.google.com/maps?q=${latitude},${longitude}`);
     });
   };
+
+  // Default region centered on the location
+  const region = {
+    latitude,
+    longitude,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  };
+
+  // For web, show coordinate fallback
+  if (Platform.OS === 'web') {
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>{title || 'Location'}</Text>
+              {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
+            </View>
+            <TouchableOpacity onPress={openExternalMaps} style={styles.closeButton}>
+              <Ionicons name="open-outline" size={24} color="#3B82F6" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.webContainer}>
+            <Ionicons name="location" size={60} color="#3B82F6" />
+            <Text style={styles.coordsText}>{latitude.toFixed(6)}, {longitude.toFixed(6)}</Text>
+            <TouchableOpacity style={styles.openMapsButton} onPress={openExternalMaps}>
+              <Ionicons name="open-outline" size={20} color="#fff" />
+              <Text style={styles.openMapsText}>Open in Google Maps</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomInfo}>
+            <View style={styles.coordsCard}>
+              <Ionicons name="navigate" size={24} color="#3B82F6" />
+              <View style={styles.coordsInfo}>
+                <Text style={styles.coordsLabel}>Coordinates</Text>
+                <Text style={styles.coordsValue}>{latitude.toFixed(6)}, {longitude.toFixed(6)}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -63,34 +132,29 @@ export function LocationMapModal({ visible, onClose, latitude, longitude, title,
           </TouchableOpacity>
         </View>
 
-        {Platform.OS === 'web' ? (
-          <View style={styles.webContainer}>
-            <Ionicons name="location" size={60} color="#3B82F6" />
-            <Text style={styles.coordsText}>{latitude.toFixed(6)}, {longitude.toFixed(6)}</Text>
-            <TouchableOpacity style={styles.openMapsButton} onPress={openExternalMaps}>
-              <Ionicons name="open-outline" size={20} color="#fff" />
-              <Text style={styles.openMapsText}>Open in Google Maps</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.mapContainer}>
-            {mapLoading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color="#3B82F6" />
-                <Text style={styles.loadingText}>Loading map...</Text>
-              </View>
-            )}
-            <WebView
-              source={{ html: osmHtml }}
-              style={styles.webview}
-              onLoad={() => setMapLoading(false)}
-              javaScriptEnabled
-              domStorageEnabled
-              originWhitelist={['*']}
-              mixedContentMode="always"
-            />
-          </View>
-        )}
+        <View style={styles.mapContainer}>
+          {mapLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text style={styles.loadingText}>Loading Map...</Text>
+            </View>
+          )}
+          <NativeMap
+            region={region}
+            markerCoords={{ latitude, longitude }}
+            markers={[
+              {
+                id: 'location-marker',
+                latitude,
+                longitude,
+                title: title || 'Location',
+                pinColor: '#EF4444',
+              },
+            ]}
+            style={styles.map}
+            onMarkerChange={() => {}}
+          />
+        </View>
 
         <View style={styles.bottomInfo}>
           <View style={styles.coordsCard}>
@@ -118,7 +182,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
   headerSubtitle: { fontSize: 14, color: '#94A3B8', marginTop: 2 },
   mapContainer: { flex: 1, position: 'relative' },
-  webview: { flex: 1 },
+  map: { flex: 1 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject, backgroundColor: '#0F172A',
     justifyContent: 'center', alignItems: 'center', zIndex: 10,
@@ -138,7 +202,7 @@ const styles = StyleSheet.create({
   coordsValue: { color: '#fff', fontSize: 14, fontWeight: '500', marginTop: 2 },
 });
 
-// Inline map for cards
+// Inline map for cards - uses WebView with Leaflet (for compatibility)
 export function InlineLocationMap({ latitude, longitude, height = 150 }: { latitude: number; longitude: number; height?: number }) {
   const [loading, setLoading] = useState(true);
 
