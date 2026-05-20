@@ -1,10 +1,3 @@
-cd /workspaces/Se-Q/frontend
-
-# Delete the problematic file
-rm -f eas.json
-
-# Create a fresh, clean file
-cat > eas.json << 'EOF'
 {
   "cli": {
     "version": ">= 7.0.0"
@@ -45,15 +38,3 @@ cat > eas.json << 'EOF'
     "production": {}
   }
 }
-EOF
-
-# Verify the file is valid JSON
-node -e "require('./eas.json'); console.log('✅ JSON is valid')"
-
-# Ensure NO workingDirectory lines exist
-grep -i "working" eas.json || echo "✅ No 'working' found - file is clean"
-
-# Now commit this file
-git add eas.json
-git commit -m "Fix: Clean eas.json - remove all workingDirectory lines"
-git push origin main
