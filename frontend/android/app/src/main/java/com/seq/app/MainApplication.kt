@@ -5,35 +5,45 @@ import android.content.res.Configuration
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
-import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
-import com.facebook.react.ReactPackage
 import com.facebook.react.ReactHost
-import com.facebook.react.common.ReleaseLevel
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
+import com.facebook.react.ReactNativeHost
+import com.facebook.react.ReactPackage
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.facebook.react.defaults.DefaultReactNativeHost
 
 import expo.modules.ApplicationLifecycleDispatcher
-import expo.modules.ExpoReactHostFactory
 
 class MainApplication : Application(), ReactApplication {
 
-  override val reactHost: ReactHost by lazy {
-    ExpoReactHostFactory.getDefaultReactHost(
-      context = applicationContext,
-      packageList =
-        PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
-        }
-    )
-  }
+  override val reactNativeHost: ReactNativeHost =
+      object : DefaultReactNativeHost(this) {
+        override fun getPackages(): List<ReactPackage> =
+            PackageList(this).packages.apply {
+              add(SeqPanicPackage())
+            }
+
+        override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
+
+        override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
+
+        override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+      }
+
+  /**
+   * Provides the ReactHost for bridgeless (New Architecture) mode.
+   * This was missing from the original MainApplication, causing expo's
+   * ReactActivityDelegateWrapper to receive a null reactHost, which in turn
+   * caused ReactDelegate to skip surface creation → getReactRootView() = null
+   * → setContentView(null) → "Cannot add a null child view" crash.
+   */
+  override val reactHost: ReactHost
+    get() = getDefaultReactHost(applicationContext, reactNativeHost)
 
   override fun onCreate() {
     super.onCreate()
-    DefaultNewArchitectureEntryPoint.releaseLevel = try {
-      ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
-    } catch (e: IllegalArgumentException) {
-      ReleaseLevel.STABLE
-    }
+    // loadReactNative handles: SoLoader.init(), DefaultNewArchitectureEntryPoint.load(),
+    // and edge-to-edge flag — all required for RN 0.83 to initialise correctly.
     loadReactNative(this)
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }
