@@ -7,7 +7,6 @@
 .env.production
 
 # Native projects (these contain injected tokens during build)
-/android
 /ios
 
 # OS files
