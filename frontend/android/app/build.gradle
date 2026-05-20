@@ -1,0 +1,141 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+
+react {
+    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
+    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    hermesCommand = new File(["node", "--print", "require.resolve('hermes-compiler/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/hermesc/%OS-BIN%/hermesc"
+    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+
+    enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
+    cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
+    bundleCommand = "export:embed"
+
+    autolinkLibrariesWithApp()
+}
+
+def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: false).toBoolean()
+
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace 'com.seq.app'
+    defaultConfig {
+        applicationId 'com.seq.app'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "2.1.9"
+
+        buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
+            shrinkResources enableShrinkResources.toBoolean()
+            minifyEnabled enableMinifyInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
+            crunchPngs enablePngCrunchInRelease.toBoolean()
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
+            useLegacyPackaging enableLegacyPackaging.toBoolean()
+            // FIX (Mapbox crash): when multiple ABIs each provide the same .so, pick
+            // the first one found rather than failing with a duplicate-entry error.
+            // @rnmapbox/maps bundles libmapbox-common.so / libmapbox-maps.so for each ABI;
+            // we must NOT let manually-added mapbox-android-core conflict with them.
+            pickFirsts += ['**/*.so']
+        }
+        // Remove duplicate META-INF files that cause build warnings
+        exclude 'META-INF/androidx.versionedparcelable_versionedparcelable.version'
+        exclude 'META-INF/proguard/androidx-annotations.pro'
+    }
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+}
+
+[["pickFirsts", "excludes", "merges", "doNotStrip"]].flatten().each { prop ->
+    def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",")
+    for (i in 0..<options.size()) options[i] = options[i].trim()
+    options -= ""
+    if (options.length > 0) {
+        println "android.packagingOptions.$prop += $options ($options.length)"
+        options.each { android.packagingOptions[prop] += it }
+    }
+}
+
+dependencies {
+    // React Native
+    implementation("com.facebook.react:react-android")
+
+    def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true"
+    def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true"
+    def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true"
+
+    if (isGifEnabled) {
+        implementation("com.facebook.fresco:animated-gif:${expoLibs.versions.fresco.get()}")
+    }
+    if (isWebpEnabled) {
+        implementation("com.facebook.fresco:webpsupport:${expoLibs.versions.fresco.get()}")
+        if (isWebpAnimatedEnabled) {
+            implementation("com.facebook.fresco:animated-webp:${expoLibs.versions.fresco.get()}")
+        }
+    }
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+
+    // NOTE: Do NOT manually add mapbox-android-core or mapbox-common here.
+    // @rnmapbox/maps auto-links its own compatible versions of libmapbox-maps.so
+    // and libmapbox-common.so via the Mapbox Maven repo in build.gradle (root).
+    // Adding older/different versions here causes the UnsatisfiedLinkError:
+    //   "cannot locate symbol _ZTIN6mapbox6common14NamedSchedulerE"
+    // because the manually-added .so conflicts with the one compiled into
+    // libmapbox-maps.so by @rnmapbox/maps.
+}
+
+configurations.all {
+    // Strip out legacy Android Support Library — everything must use AndroidX
+    exclude group: 'com.android.support', module: 'support-compat'
+    exclude group: 'com.android.support', module: 'support-core-utils'
+    exclude group: 'com.android.support', module: 'support-core-ui'
+    exclude group: 'com.android.support', module: 'support-fragment'
+    exclude group: 'com.android.support', module: 'support-annotations'
+    exclude group: 'com.android.support', module: 'support-v4'
+    exclude group: 'com.android.support', module: 'support-vector-drawable'
+    exclude group: 'com.android.support', module: 'support-animated-vector-drawable'
+
+    resolutionStrategy {
+        force 'androidx.core:core:1.17.0'
+        force 'androidx.core:core-ktx:1.17.0'
+        // DO NOT force mapbox-android-core or mapbox-common here —
+        // let @rnmapbox/maps pull in the exact native versions it was compiled against.
+    }
+}
