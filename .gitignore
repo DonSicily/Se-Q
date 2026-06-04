@@ -1,0 +1,67 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.apk
+*.aab
+*.ipa
+web-build/
+.expo/
+.expo-shared/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Expo / React Native
+expo-env.d.ts
+expo-internal/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+__snapshots__/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Android (if building locally)
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# iOS (if building locally)
+ios/build/
+ios/Pods/
+*.xcworkspace/xcshareddata/
+*.xcuserstate
