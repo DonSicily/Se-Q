@@ -11,10 +11,10 @@ module.exports = {
     name: 'Se-Q',
     slug: 'se-q',
     version: '2.1.9',
-    owner: 'kinasgroup',
+    owner: 'ae1982',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
-    scheme: 'safeguard',
+    scheme: 'se-q',
     userInterfaceStyle: 'dark',
     newArchEnabled: true,
     splash: {
@@ -58,7 +58,7 @@ module.exports = {
     },
     extra: {
       eas: {
-        projectId: '89e286bc-d95d-422b-95a7-f7c355de060e',
+        projectId: '20b077ed-ef31-4522-8f6e-be1dbd9eaa73',
       },
       backendUrl: 'https://se-q-production.up.railway.app',
       googleMapsApiKey: GOOGLE_MAPS_KEY,
